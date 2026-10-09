@@ -117,7 +117,10 @@
   .stale { color: var(--warn); font-weight: 700; font-size: 0.95rem; }
   @media (max-width: 420px) { .row3 { grid-template-columns: 1fr 1fr; } .row3 .check { grid-column: 1 / -1; padding-bottom: 0; } }
   @media (prefers-reduced-motion: no-preference) { .catch { transition: border-color .2s; } }
-  .setup { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+  .setup { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .setup[open] { display: grid; gap: 10px; }
+  .setup.done { background: transparent; border: 0; padding: 0; }
+  .setup.done > summary { color: var(--muted); font-weight: 400; font-size: 0.9rem; }
   .setup ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
   .nowhead { display: flex; gap: 10px; align-items: center; }
 </style>
@@ -295,8 +298,8 @@
     </div>
   </section>
 
-  <section class="setup" id="setup">
-    <h2>Saving from this phone</h2>
+  <details class="setup" id="setup">
+    <summary id="setupSum">Saving from this phone</summary>
     <div id="keyState" class="sub"></div>
     <details id="keyHelp">
       <summary>How to set it up</summary>
@@ -315,7 +318,7 @@
       <button class="danger" type="button" id="keyForget" hidden>Forget key</button>
     </div>
     <div class="hint">The key stays on this phone only. Anyone can read the journal. Only this key can change it.</div>
-  </section>
+  </details>
 
   <p class="sub">River: Environment Agency, Marston on Dove gauge.
     Weather and flow forecast: Open-Meteo. Barbel rating: the Dove outlook rules.</p>
@@ -951,6 +954,11 @@
       ok === false ? "This key doesn't work. Make a new one and paste it below." :
       ok === null ? "Key saved. Couldn't check it just now." : "Set up. This phone can save to the journal.";
     $("keyState").className = ok === false ? "status" : "sub";
+    // Once it works, shrink to one quiet line. Otherwise keep it open and obvious.
+    const done = has && ok !== false;
+    $("setup").classList.toggle("done", done);
+    $("setup").open = !done;
+    $("setupSum").textContent = done ? "Saving is set up on this phone" : "Saving from this phone";
     render();
     fillConditions();
   }
