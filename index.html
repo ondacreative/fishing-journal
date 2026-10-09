@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d5c4d">
+<title>Fishing Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+  /* Layout: one phone-width column. Big "Add a fish" action up top, best fish, then catch cards newest first. */
+  :root {
+    --bg: #eef2ee;          /* pale water-meadow */
+    --card: #ffffff;
+    --fg: #172420;          /* deep river green-black */
+    --muted: #55655f;
+    --line: #d3ddd7;
+    --accent: #1d5c4d;      /* river green */
+    --accent-fg: #ffffff;
+    --bronze: #a8661b;      /* chub-scale bronze, for PBs */
+    --soft: #e3ece7;
+    --warn: #9b2c1f;
+    --font: "Atkinson Hyperlegible", "Verdana", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1614; --card: #18221f; --fg: #e6eeea; --muted: #a2b2ab; --line: #2c3a35;
+      --accent: #5fb89f; --accent-fg: #0b1512; --bronze: #e0a253; --soft: #20302b; --warn: #f08a7a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1614; --card: #18221f; --fg: #e6eeea; --muted: #a2b2ab; --line: #2c3a35;
+    --accent: #5fb89f; --accent-fg: #0b1512; --bronze: #e0a253; --soft: #20302b; --warn: #f08a7a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  img { max-width: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 18px/1.55 var(--font); }
+  .wrap { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 16px 48px; display: grid; gap: 22px; }
+  h1 { font-size: 1.6rem; margin: 0; text-wrap: balance; }
+  h2 { font-size: 1.15rem; margin: 0 0 8px; }
+  .sub { color: var(--muted); font-size: 0.9rem; }
+  button, .btn { font: inherit; border-radius: 10px; border: 2px solid transparent; cursor: pointer; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline: 3px solid var(--bronze); outline-offset: 2px; }
+  .primary { background: var(--accent); color: var(--accent-fg); font-weight: 700; font-size: 1.15rem; padding: 14px 18px; width: 100%; }
+  .ghost { background: transparent; color: var(--accent); border-color: var(--accent); padding: 8px 14px; font-weight: 700; }
+  .danger { background: transparent; color: var(--warn); border-color: var(--warn); padding: 8px 14px; font-weight: 700; }
+
+  /* Form */
+  form { background: var(--card); border-radius: 14px; padding: 16px; display: grid; gap: 18px; border: 1px solid var(--line); }
+  fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
+  legend, label.lab { font-weight: 700; padding: 0; }
+  .hint { color: var(--muted); font-size: 0.85rem; }
+  input[type=text], input[type=number], input[type=date], input[type=time], input[type=password], textarea {
+    font: inherit; color: var(--fg); background: var(--bg); border: 2px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; width: 100%; box-sizing: border-box; min-width: 0;
+  }
+  textarea { min-height: 80px; resize: vertical; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { background: var(--soft); color: var(--fg); padding: 8px 14px; border-color: var(--line); }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
+  .check { display: flex; gap: 8px; align-items: center; padding-bottom: 12px; white-space: nowrap; }
+  .check input { width: 22px; height: 22px; }
+  .spotok { color: var(--accent); font-weight: 700; font-size: 0.9rem; }
+  .spoterr { color: var(--warn); font-weight: 700; font-size: 0.9rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .actions .primary { flex: 1 1 200px; width: auto; }
+  .confirm { background: var(--soft); border-radius: 10px; padding: 12px; display: grid; gap: 10px; }
+  .preview { max-height: 180px; border-radius: 10px; }
+
+  /* Best fish */
+  .best { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .pbcard { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .pbcard .sp { color: var(--muted); font-size: 0.9rem; }
+  .pbcard .wt { font-size: 1.5rem; font-weight: 700; color: var(--bronze); font-variant-numeric: tabular-nums; }
+
+  /* Catch cards */
+  .list { display: grid; gap: 12px; }
+  .catch { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+  .top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .top > div { min-width: 0; }
+  .fish { font-size: 1.25rem; }
+  .fish b { font-variant-numeric: tabular-nums; }
+  .pb { background: var(--bronze); color: var(--card); border-radius: 6px; padding: 0 8px; font-size: 0.8rem; font-weight: 700; vertical-align: middle; }
+  .when { color: var(--muted); font-size: 0.95rem; }
+  .photo { width: 100%; max-height: 320px; object-fit: cover; border-radius: 10px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; min-width: 0; }
+  .pending { background: var(--soft); border-radius: 10px; padding: 10px 12px; font-size: 0.95rem; }
+  .links { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.95rem; }
+  .links a { color: var(--accent); font-weight: 700; }
+  .empty { background: var(--card); border: 2px dashed var(--line); border-radius: 14px; padding: 18px; color: var(--muted); }
+  .status { color: var(--warn); font-weight: 700; }
+  .starts { display: grid; gap: 10px; }
+  .wide { width: 100%; padding: 12px 18px; }
+  .row2 { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+  .catch.blank { border: 2px dashed var(--line); }
+  .sess { font-size: 1.25rem; font-weight: 700; }
+  .fishrow { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 8px; }
+  details > summary { cursor: pointer; color: var(--accent); font-weight: 700; padding: 4px 0; }
+  details[open] > summary { margin-bottom: 6px; }
+  .tag { color: var(--muted); font-size: 0.85rem; }
+  .startk { background: var(--soft); border-radius: 10px; padding: 10px 12px; font-size: 0.95rem; }
+  .nowcard { background: var(--card); border: 2px solid var(--accent); border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+  .nowcard h2 { margin: 0; }
+  .nowcard .top { align-items: baseline; }
+  .nowlines { display: grid; gap: 4px; }
+  .rating { display: inline-block; border-radius: 6px; padding: 0 10px; font-weight: 700; color: var(--card); }
+  .rating.Good { background: var(--accent); }
+  .rating.Fair { background: var(--bronze); }
+  .rating.Poor { background: var(--muted); }
+  .stale { color: var(--warn); font-weight: 700; font-size: 0.95rem; }
+  @media (max-width: 420px) { .row3 { grid-template-columns: 1fr 1fr; } .row3 .check { grid-column: 1 / -1; padding-bottom: 0; } }
+  @media (prefers-reduced-motion: no-preference) { .catch { transition: border-color .2s; } }
+  .setup { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+  .setup ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+  .nowhead { display: flex; gap: 10px; align-items: center; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Fishing Journal</h1>
+    <div class="sub" id="count">Loading your catches…</div>
+  </header>
+
+  <section class="nowcard" id="nowCard" aria-labelledby="nowTitle">
+    <div class="top">
+      <h2 id="nowTitle">Right now</h2>
+      <div class="nowhead"><span class="sub" id="nowAge"></span>
+        <button class="ghost" type="button" id="nowRefresh">Refresh</button></div>
+    </div>
+    <div id="nowBody" class="sub">Getting river and weather…</div>
+  </section>
+
+  <div id="status" class="status" hidden></div>
+
+  <div class="starts" id="starts" hidden>
+    <button class="primary" id="openForm" type="button">+ Add a fish</button>
+    <button class="ghost wide" id="openTrip" type="button">+ Log a session</button>
+  </div>
+
+  <form id="form" hidden novalidate>
+    <h2 id="formTitle">Add a fish</h2>
+
+    <fieldset>
+      <legend>Species</legend>
+      <div class="chips" id="speciesChips"></div>
+      <input type="text" id="speciesOther" placeholder="Other species" hidden>
+    </fieldset>
+
+    <fieldset>
+      <legend>Weight</legend>
+      <div class="row3">
+        <div><label class="lab" for="lb">lb</label><input type="number" id="lb" inputmode="numeric" min="0" max="99"></div>
+        <div><label class="lab" for="oz">oz</label><input type="number" id="oz" inputmode="numeric" min="0" max="15"></div>
+        <label class="check"><input type="checkbox" id="plus"> Plus (+)</label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>When</legend>
+      <div class="row">
+        <input type="date" id="date" aria-label="Date">
+        <input type="time" id="time" aria-label="Time">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Where</legend>
+      <div class="chips" id="spotChips"></div>
+      <label class="lab" for="coords">Or paste coordinates</label>
+      <input type="text" id="coords" placeholder="52.853153, -1.630004" autocomplete="off">
+      <div class="hint">In Google Maps, drop a pin and copy the numbers at the top.</div>
+      <div id="coordsMsg" aria-live="polite"></div>
+      <label class="lab" for="spot">Spot name (optional)</label>
+      <input type="text" id="spot" placeholder="e.g. Island tip">
+    </fieldset>
+
+    <fieldset>
+      <legend>Bait</legend>
+      <div class="chips" id="baitChips"></div>
+      <input type="text" id="bait" placeholder="Bait">
+    </fieldset>
+
+    <fieldset>
+      <label class="lab" for="method">Method (optional)</label>
+      <input type="text" id="method" placeholder="e.g. Feeder, link leger">
+      <label class="lab" for="notes">Notes (optional)</label>
+      <textarea id="notes"></textarea>
+    </fieldset>
+
+    <fieldset id="photoSet" hidden>
+      <label class="lab" for="photo">Photo (optional)</label>
+      <input type="file" id="photo" accept="image/*">
+      <img id="photoPreview" class="preview" alt="Photo preview" hidden>
+    </fieldset>
+
+    <div id="formErr" class="status" aria-live="polite"></div>
+
+    <div class="actions">
+      <button class="primary" type="submit" id="save">Save fish</button>
+      <button class="ghost" type="button" id="cancel">Cancel</button>
+      <button class="danger" type="button" id="del" hidden>Delete</button>
+    </div>
+    <div class="confirm" id="confirmDel" hidden>
+      <div>Delete this fish for good?</div>
+      <div class="actions">
+        <button class="danger" type="button" id="delYes">Yes, delete</button>
+        <button class="ghost" type="button" id="delNo">Keep it</button>
+      </div>
+    </div>
+  </form>
+
+  <form id="tripForm" hidden novalidate>
+    <h2 id="tripTitle">Log a session</h2>
+    <div class="hint">Fish caught in this time are grouped under it.
+      No fish? It shows as a blank. Still worth logging.</div>
+
+    <fieldset>
+      <legend>Start</legend>
+      <div class="row">
+        <input type="date" id="tDate" aria-label="Date">
+        <input type="time" id="tTime" aria-label="Start time">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>How long</legend>
+      <div class="chips" id="hourChips"></div>
+      <div class="row">
+        <div><label class="lab" for="tHours">Hours</label><input type="number" id="tHours" inputmode="decimal" min="0.5" max="48" step="0.5"></div>
+        <div class="hint" id="tEnd" aria-live="polite"></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Methods</legend>
+      <div class="hint">Pick all you used.</div>
+      <div class="chips" id="methodChips"></div>
+      <div class="row2">
+        <input type="text" id="tMethodNew" placeholder="Another method" aria-label="Another method">
+        <button class="ghost" type="button" id="tMethodAdd">Add</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Where (optional)</legend>
+      <div class="chips" id="tSpotChips"></div>
+      <label class="lab" for="tCoords">Or paste coordinates</label>
+      <input type="text" id="tCoords" placeholder="52.853153, -1.630004" autocomplete="off">
+      <div id="tCoordsMsg" aria-live="polite"></div>
+      <label class="lab" for="tSpot">Spot name (optional)</label>
+      <input type="text" id="tSpot" placeholder="e.g. Island tip">
+    </fieldset>
+
+    <fieldset>
+      <label class="lab" for="tBait">Baits (optional)</label>
+      <input type="text" id="tBait" placeholder="e.g. Boilie, then maggot">
+      <label class="lab" for="tNotes">Notes (optional)</label>
+      <textarea id="tNotes" placeholder="e.g. Two knocks at dusk. River coloured."></textarea>
+    </fieldset>
+
+    <div id="tErr" class="status" aria-live="polite"></div>
+
+    <div class="actions">
+      <button class="primary" type="submit" id="tSave">Save session</button>
+      <button class="ghost" type="button" id="tCancel">Cancel</button>
+      <button class="danger" type="button" id="tDel" hidden>Delete</button>
+    </div>
+    <div class="confirm" id="tConfirmDel" hidden>
+      <div>Delete this session? Your fish are kept.</div>
+      <div class="actions">
+        <button class="danger" type="button" id="tDelYes">Yes, delete</button>
+        <button class="ghost" type="button" id="tDelNo">Keep it</button>
+      </div>
+    </div>
+  </form>
+
+  <section>
+    <h2>Best fish</h2>
+    <div class="best" id="best"><div class="empty">Your best fish of each species will show here.</div></div>
+  </section>
+
+  <section>
+    <h2>Sessions</h2>
+    <div class="list" id="list">
+      <div class="empty">No fish yet. Tap <b>Add a fish</b> after your next catch.</div>
+    </div>
+  </section>
+
+  <section class="setup" id="setup">
+    <h2>Saving from this phone</h2>
+    <div id="keyState" class="sub"></div>
+    <details id="keyHelp">
+      <summary>How to set it up</summary>
+      <ol>
+        <li>On GitHub, open <b>Settings</b>, then <b>Developer settings</b>, then <b>Fine-grained tokens</b>.</li>
+        <li>Tap <b>Generate new token</b>. Name it "Fishing journal".</li>
+        <li>Expiration: pick the longest. Repository access: <b>Only select repositories</b>, then <b>fishing-journal</b>.</li>
+        <li>Permissions: <b>Contents</b>, set to <b>Read and write</b>.</li>
+        <li>Generate it, copy it, and paste it below.</li>
+      </ol>
+    </details>
+    <label class="lab" for="keyIn">GitHub key</label>
+    <input type="password" id="keyIn" autocomplete="off" placeholder="github_pat_…">
+    <div class="actions">
+      <button class="ghost" type="button" id="keySave">Save key</button>
+      <button class="danger" type="button" id="keyForget" hidden>Forget key</button>
+    </div>
+    <div class="hint">The key stays on this phone only. Anyone can read the journal. Only this key can change it.</div>
+  </section>
+
+  <p class="sub">River: Environment Agency, Marston on Dove gauge.
+    Weather and flow forecast: Open-Meteo. Barbel rating: the Dove outlook rules.</p>
+</div>
+
+<script src="conditions.js"></script>
+<script src="store.js"></script>
+<script>
+(() => {
+  const SPECIES = ["Chub", "Barbel", "Perch", "Pike", "Roach", "Dace"];
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+
+  let db = null, assets = null, canWrite = false;
+  let catches = [];               // [{id, ...data}]
+  let editing = null;             // id being edited, or null
+  let species = "", photoBlob = null;
+  let trips = [];                 // logged sessions: [{id, date, time, hours, methods, ...}]
+  let editingTrip = null, tMethods = [];
+  const METHODS = ["Feeder", "Link leger", "Trotting", "Float", "Freelining", "Lure"];
+  const HOURS = [2, 3, 4, 6, 8];
+  // The two forms share the spot picker; these are each form's element ids.
+  const FISH_SPOT = { box: "spotChips", coords: "coords", msg: "coordsMsg", spot: "spot", first: "Same spot as last fish" };
+  const TRIP_SPOT = { box: "tSpotChips", coords: "tCoords", msg: "tCoordsMsg", spot: "tSpot", first: "Same spot as last time" };
+
+  // ---------- helpers
+  const pad = n => String(n).padStart(2, "0");
+  function nowParts() {
+    const d = new Date();
+    return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` };
+  }
+  function weightText(lb, oz, plus) {
+    if (lb === "" && oz === "") return "";
+    let t = `${Number(lb || 0)}lb`;
+    if (Number(oz)) t += ` ${Number(oz)}oz`;
+    return t + (plus ? "+" : "");
+  }
+  function parseCoords(text) {
+    const t = String(text).trim();
+    const m = t.match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
+    if (!m) return null;
+    const lat = Number(m[1]), lon = Number(m[2]);
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+    return { lat, lon };
+  }
+  function dayLabel(date) {
+    const d = new Date(date + "T12:00:00");
+    return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  }
+  function spotsFromCatches() {
+    // distinct places, newest first, merged within ~15 m
+    const out = [];
+    for (const c of [...catches, ...trips].sort(byNewest)) {
+      if (typeof c.lat !== "number") continue;
+      const near = out.find(s => Math.abs(s.lat - c.lat) < 0.00014 && Math.abs(s.lon - c.lon) < 0.00022);
+      if (near) { if (!near.name && c.spot) near.name = c.spot; continue; }
+      out.push({ lat: c.lat, lon: c.lon, name: c.spot || "", date: c.date });
+    }
+    return out.slice(0, 8);
+  }
+  const byNewest = (a, b) => (b.date + b.time).localeCompare(a.date + a.time);
+  function endTime(time, hours) {
+    // "06:30" + 4.5 -> "11:00", with "next day" if it runs past midnight
+    const h = Number(hours);
+    if (!time || !(h > 0)) return "";
+    const [hh, mm] = time.split(":").map(Number);
+    const total = hh * 60 + mm + Math.round(h * 60);
+    const t = `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`;
+    return total >= 24 * 60 ? `${t} next day` : t;
+  }
+  const hoursText = h => `${Number(h)} ${Number(h) === 1 ? "hour" : "hours"}`;
+
+  // ---------- render
+  function render() {
+    const n = catches.length, all = sessions(), b = all.filter(x => !x.fish.length).length;
+    const parts = [n ? `${n} fish logged` : "No fish logged yet"];
+    if (all.length) parts.push(`${all.length} ${all.length === 1 ? "session" : "sessions"}`);
+    if (b) parts.push(`${b} blank`);
+    $("count").textContent = parts.join(", ");
+    renderBest();
+    renderList();
+  }
+
+  function renderBest() {
+    const best = {};
+    for (const c of catches) {
+      const w = Number(c.weight_lb);
+      if (!c.species || !isFinite(w)) continue;
+      if (!best[c.species] || w > best[c.species].weight_lb) best[c.species] = c;
+    }
+    const keys = Object.keys(best).sort();
+    $("best").innerHTML = keys.length ? keys.map(k => {
+      const c = best[k];
+      return `<div class="pbcard"><div class="sp">${esc(k)}</div><div class="wt">${esc(c.weight)}</div><div class="sub">${esc(dayLabel(c.date))}</div></div>`;
+    }).join("") : `<div class="empty">Your best fish of each species will show here.</div>`;
+    return best;
+  }
+
+  // ---------- conditions now, fetched live
+  let nowDoc = null, normals = null, nowBusy = false;
+  const STALE_HOURS = 1;
+  const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  function ageText(iso) {
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60e3);
+    if (!isFinite(mins)) return { text: "", hours: Infinity };
+    const d = new Date(iso);
+    const at = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const day = d.toDateString() === new Date().toDateString() ? "today" : dayLabel(isoDate(d));
+    return { text: `Updated ${at} ${day}`, hours: mins / 60 };
+  }
+  function renderNow() {
+    if (!nowDoc) return;
+    const k = nowDoc, o = k.outlook;
+    const age = ageText(k.updated);
+    $("nowAge").textContent = age.text;
+    const sign = v => (v >= 0 ? "+" : "") + Math.round(v);
+    const lines = [];
+    if (typeof k.level_m === "number") {
+      const ch = typeof k.level_change_24h_cm === "number" ? `, ${sign(k.level_change_24h_cm)} cm in 24h` : "";
+      lines.push(`<b>River</b> ${k.level_m.toFixed(2)} m, ${esc(k.level_vs_normal)}, ${esc(k.level_trend)}${ch}`);
+    }
+    if (typeof k.air_temp_c === "number") lines.push(`<b>Air</b> ${Math.round(k.air_temp_c)} °C, ${esc(k.wind_from)} wind ${Math.round(k.wind_kmh)} km/h`);
+    if (typeof k.pressure_hpa === "number") {
+      const pch = typeof k.pressure_change_24h === "number" ? `, ${sign(k.pressure_change_24h)} in 24h` : "";
+      lines.push(`<b>Pressure</b> ${k.pressure_hpa} hPa${pch}`);
+    }
+    if (typeof k.rain_72h_mm === "number") lines.push(`<b>Rain</b> ${k.rain_24h_mm} mm in 24h, ${k.rain_72h_mm} mm in 3 days`);
+    const barbel = o ? `<div><b>Barbel today:</b> <span class="rating ${esc(o.today)}">${esc(o.today)}</span>
+      <span class="sub">${esc(o.reasons)}</span></div>` : "";
+    const head = o && o.lines && o.lines.length ? `<div>${esc(o.lines[0])}</div>` : "";
+    const more = o ? `<div class="nowlines">
+        ${(o.lines || []).slice(1).map(l => `<div>${esc(l)}</div>`).join("")}
+        <div><b>Next days:</b> ${(o.next || []).map(d => `${esc(d.day)} <span class="rating ${esc(d.rating)}">${esc(d.rating)}</span>`).join(" ")}</div>
+      </div>` : "";
+    const stale = age.hours > STALE_HOURS
+      ? `<div class="stale">This is ${Math.round(age.hours)} ${Math.round(age.hours) === 1 ? "hour" : "hours"} old. Tap Refresh.</div>` : "";
+    $("nowBody").innerHTML = `${stale}${barbel}${head}
+      <div class="nowlines">${lines.map(l => `<div>${l}</div>`).join("")}</div>
+      <details><summary>More</summary>${more}${conditionsHtml(k)}</details>`;
+  }
+
+  async function refreshNow() {
+    if (nowBusy) return;
+    nowBusy = true;
+    $("nowRefresh").disabled = true; $("nowRefresh").textContent = "Getting…";
+    try {
+      if (!normals) normals = await fetch("data/normals.json").then(r => r.ok ? r.json() : null).catch(() => null);
+      nowDoc = await Conditions.now(normals);
+      renderNow();
+    } catch (e) {
+      if (!nowDoc) $("nowBody").textContent = "Couldn't get the river and weather. Check your signal, then tap Refresh.";
+      else $("nowAge").textContent = "Refresh failed. Showing older figures.";
+    } finally {
+      nowBusy = false;
+      $("nowRefresh").disabled = false; $("nowRefresh").textContent = "Refresh";
+    }
+  }
+
+  function conditionsLine(k) {
+    // One short line for the session card: river, air, wind, pressure.
+    if (!k) return canWrite ? "Working out conditions…" : "Conditions not worked out yet.";
+    const num = v => (typeof v === "number" && isFinite(v)) ? v : null;
+    const bits = [];
+    if (num(k.level_m) !== null) bits.push(`River ${k.level_m.toFixed(2)} m, ${esc(k.level_vs_normal)}, ${esc(k.level_trend)}`);
+    if (num(k.air_temp_c) !== null) bits.push(`${Math.round(k.air_temp_c)} °C`);
+    if (num(k.wind_kmh) !== null) bits.push(`${esc(k.wind_from)} wind ${Math.round(k.wind_kmh)} km/h`);
+    if (num(k.pressure_hpa) !== null) bits.push(`${Math.round(k.pressure_hpa)} hPa`);
+    return `<b>At the start:</b> ${bits.join(" · ") || "no data"}`;
+  }
+
+  function conditionsHtml(k) {
+    if (!k) return `<div class="pending">${canWrite ? "Working out conditions…" : "Conditions not worked out yet."}</div>`;
+    const num = (v, d = 0) => (typeof v === "number" && isFinite(v)) ? v.toFixed(d) : "–";
+    const ch = typeof k.level_change_24h_cm === "number" ? `, ${k.level_change_24h_cm >= 0 ? "+" : ""}${num(k.level_change_24h_cm)} cm in 24h` : "";
+    const pch = typeof k.pressure_change_24h === "number" ? `, ${k.pressure_change_24h >= 0 ? "+" : ""}${num(k.pressure_change_24h)} in 24h` : "";
+    return `<dl>
+      <dt>River</dt><dd>${num(k.level_m, 2)} m (${esc(k.level_vs_normal)}), ${esc(k.level_trend)}${ch}</dd>
+      <dt>Air</dt><dd>${num(k.air_temp_c)} °C, wind ${esc(k.wind_from)} ${num(k.wind_kmh)} km/h, cloud ${num(k.cloud_pct)}%</dd>
+      <dt>Rain</dt><dd>${num(k.rain_24h_mm, 1)} mm in 24h, ${num(k.rain_72h_mm, 1)} mm in 3 days</dd>
+      <dt>Pressure</dt><dd>${num(k.pressure_hpa)} hPa${pch}</dd>
+      <dt>Light</dt><dd>${esc(k.light)}</dd>
+      <dt>Moon</dt><dd>${num(k.moon_pct)}%, ${esc(k.moon_phase)}</dd>
+    </dl>${k.data_note ? `<div class="sub">${esc(k.data_note)}</div>` : ""}`;
+  }
+
+  // Sessions: a logged session holds the fish caught in its time window.
+  // Fish outside any logged session are grouped by time: gaps under 4 hours chain together.
+  const SLACK = 30 * 60e3, GAP = 4 * 3600e3;
+  const ms = (date, time) => new Date(`${date}T${time || "00:00"}`).getTime();
+  function sessions() {
+    const logged = trips.map(t => ({ trip: t, start: ms(t.date, t.time), end: ms(t.date, t.time) + Number(t.hours || 0) * 3600e3, fish: [] }));
+    const loose = [];
+    for (const c of [...catches].sort((a, b) => ms(a.date, a.time) - ms(b.date, b.time))) {
+      const m = ms(c.date, c.time);
+      const home = logged.find(x => m >= x.start && m <= x.end) || logged.find(x => m >= x.start - SLACK && m <= x.end + SLACK);
+      if (home) home.fish.push(c); else loose.push(c);
+    }
+    const auto = [];
+    for (const c of loose) {
+      const m = ms(c.date, c.time), last = auto[auto.length - 1];
+      if (last && m - last.end <= GAP) { last.fish.push(c); last.end = m; }
+      else auto.push({ trip: null, start: m, end: m, fish: [c] });
+    }
+    return [...logged, ...auto].sort((a, b) => b.start - a.start);
+  }
+
+  function renderList() {
+    if (!catches.length && !trips.length) {
+      $("list").innerHTML = `<div class="empty">No fish yet. Tap <b>Add a fish</b> after your next catch.</div>`;
+      return;
+    }
+    const best = {};
+    for (const c of catches) if (isFinite(c.weight_lb) && (!best[c.species] || c.weight_lb > best[c.species])) best[c.species] = c.weight_lb;
+    $("list").innerHTML = sessions().map(x => sessionCard(x, best)).join("");
+  }
+
+  function fishRow(c, best) {
+    const extra = [c.bait, c.method, c.spot].filter(Boolean).map(esc).join(" · ");
+    const pb = isFinite(c.weight_lb) && c.weight_lb === best[c.species] ? ` <span class="pb">PB</span>` : "";
+    const photo = c.photo ? `<img class="photo" src="${esc(GitHubStore.photoUrl(c.photo))}" alt="${esc(c.species)} ${esc(c.weight)}" loading="lazy" onerror="this.hidden=true">` : "";
+    const map = typeof c.lat === "number" ? `<a href="https://www.google.com/maps?q=${c.lat},${c.lon}" target="_blank" rel="noopener">Open in Maps</a>` : "";
+    const edit = canWrite ? `<button class="ghost" type="button" data-edit="${esc(c.id)}">Edit</button>` : "";
+    return `<div class="fishrow">
+      <div class="top"><div>
+        <div class="fish">${esc(c.species)} <b>${esc(c.weight)}</b>${pb}</div>
+        <div class="when">${esc(c.time)}${extra ? ` · ${extra}` : ""}</div>
+      </div>${edit}</div>
+      ${photo}
+      ${c.notes ? `<div>${esc(c.notes)}</div>` : ""}
+      <details><summary>Conditions at ${esc(c.time)}</summary>${conditionsHtml(c.conditions)}</details>
+      <div class="links">${map}</div>
+    </div>`;
+  }
+
+  function sessionCard(x, best) {
+    const t = x.trip, n = x.fish.length, first = t || x.fish[0];
+    let when;
+    if (t) {
+      const end = endTime(t.time, t.hours);
+      when = `${esc(t.time)}${end ? ` to ${esc(end)}` : ""}${t.hours ? `, ${esc(hoursText(t.hours))}` : ""}`;
+    } else {
+      when = n > 1 ? `${esc(x.fish[0].time)} to ${esc(x.fish[n - 1].time)}` : esc(x.fish[0].time);
+    }
+    const what = n ? `${n} fish` : "Blank";
+    const methods = t ? (t.methods || []).map(esc).join(", ") : "";
+    const extra = t ? [t.spot, t.bait].filter(Boolean).map(esc).join(" · ") : "";
+    const ref = t ? `data-edit-trip="${esc(t.id)}"` : `data-detail="${esc(x.fish[0].id)}"`;
+    const edit = canWrite ? `<button class="ghost" type="button" ${ref}>${t ? "Edit" : "Add details"}</button>` : "";
+    const map = t && typeof t.lat === "number" && !n ? `<div class="links"><a href="https://www.google.com/maps?q=${t.lat},${t.lon}" target="_blank" rel="noopener">Open in Maps</a></div>` : "";
+    // A time-grouped session starts at its first fish, so that fish's conditions are the start conditions.
+    const k = t ? t.conditions : x.fish[0].conditions;
+    const startTime = t ? t.time : x.fish[0].time;
+    const cond = `<div class="startk">${conditionsLine(k)}</div>
+      ${k ? `<details><summary>All conditions at ${esc(startTime)}</summary>${conditionsHtml(k)}</details>` : ""}`;
+    const add = canWrite ? `<div><button class="ghost" type="button" data-add-to="${esc(t ? t.id : x.fish[0].id)}">+ Add a fish to this session</button></div>` : "";
+    return `<article class="catch${n ? "" : " blank"}">
+      <div class="top"><div>
+        <div class="sess">${esc(dayLabel(first.date))}</div>
+        <div class="when"><b>${what}</b> · ${when}</div>
+        ${methods ? `<div class="when">${methods}</div>` : ""}
+        ${extra ? `<div class="when">${extra}</div>` : ""}
+        ${t ? "" : `<div class="tag">Grouped by time. Tap Add details to log hours and methods.</div>`}
+      </div>${edit}</div>
+      ${t && t.notes ? `<div>${esc(t.notes)}</div>` : ""}
+      ${cond}${map}
+      ${x.fish.map(c => fishRow(c, best)).join("")}
+      ${add}
+    </article>`;
+  }
+
+  // ---------- form
+  function chip(label, pressed, onClick) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "btn chip"; b.textContent = label;
+    b.setAttribute("aria-pressed", pressed ? "true" : "false");
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  function drawSpecies() {
+    const box = $("speciesChips"); box.replaceChildren();
+    const known = SPECIES.includes(species);
+    for (const s of SPECIES) box.append(chip(s, species === s, () => { species = s; $("speciesOther").hidden = true; drawSpecies(); }));
+    box.append(chip("Other", !!species && !known, () => { species = $("speciesOther").value.trim() || "_other"; $("speciesOther").hidden = false; $("speciesOther").focus(); drawSpecies(); }));
+    if (species && !known) $("speciesOther").hidden = false;
+  }
+
+  function drawSpots(f = FISH_SPOT) {
+    const box = $(f.box); box.replaceChildren();
+    const cur = parseCoords($(f.coords).value);
+    spotsFromCatches().forEach((s, i) => {
+      const label = s.name || (i === 0 ? f.first : `Spot from ${dayLabel(s.date)}`);
+      const picked = cur && cur.lat === s.lat && cur.lon === s.lon;
+      box.append(chip(label, picked, () => {
+        $(f.coords).value = `${s.lat}, ${s.lon}`;
+        if (s.name && !$(f.spot).value) $(f.spot).value = s.name;
+        showCoords(f); drawSpots(f);
+      }));
+    });
+  }
+
+  function drawBaits() {
+    const box = $("baitChips"); box.replaceChildren();
+    const seen = [];
+    for (const c of [...catches].sort(byNewest)) if (c.bait && !seen.includes(c.bait)) seen.push(c.bait);
+    for (const b of seen.slice(0, 6)) box.append(chip(b, $("bait").value === b, () => { $("bait").value = b; drawBaits(); }));
+  }
+
+  function showCoords(f = FISH_SPOT) {
+    const msg = $(f.msg);
+    const v = $(f.coords).value.trim();
+    if (!v) { msg.textContent = ""; msg.className = ""; return null; }
+    const p = parseCoords(v);
+    if (p) { msg.textContent = `Got it: ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`; msg.className = "spotok"; }
+    else { msg.textContent = "Those don't look like coordinates. Copy the numbers, not a share link."; msg.className = "spoterr"; }
+    return p;
+  }
+
+  function openForm(c, preset) {
+    editing = c ? c.id : null;
+    $("formTitle").textContent = c ? "Edit fish" : "Add a fish";
+    $("save").textContent = c ? "Save changes" : "Save fish";
+    const now = nowParts();
+    species = c ? c.species : (store.get("fj_species") || "Chub");
+    $("speciesOther").value = c && !SPECIES.includes(c.species) ? c.species : "";
+    $("lb").value = c ? (c.lb ?? "") : "";
+    $("oz").value = c ? (c.oz ?? "") : "";
+    $("plus").checked = c ? !!c.plus : false;
+    $("date").value = c ? c.date : (preset ? preset.date : now.date);
+    $("time").value = c ? c.time : (preset ? preset.time : now.time);
+    const at = c || preset;
+    $("coords").value = at && typeof at.lat === "number" ? `${at.lat}, ${at.lon}` : "";
+    $("spot").value = c ? (c.spot || "") : (preset ? preset.spot || "" : "");
+    $("bait").value = c ? (c.bait || "") : (store.get("fj_bait") || "");
+    $("method").value = c ? (c.method || "") : (store.get("fj_method") || "");
+    $("notes").value = c ? (c.notes || "") : "";
+    $("photo").value = ""; photoBlob = null;
+    $("photoPreview").hidden = !(c && c.photo);
+    if (c && c.photo) $("photoPreview").src = GitHubStore.photoUrl(c.photo);
+    $("del").hidden = !c; $("confirmDel").hidden = true; $("formErr").textContent = "";
+    drawSpecies(); drawSpots(); drawBaits(); showCoords();
+    closeTrip();
+    $("form").hidden = false; $("starts").hidden = true;
+    $("form").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function closeForm() {
+    $("form").hidden = true; $("starts").hidden = !canWrite; editing = null;
+  }
+
+  async function shrinkPhoto(file) {
+    // Phone photos are large; keep the long side at 1600 px.
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+      const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+      const cv = document.createElement("canvas");
+      cv.width = Math.round(img.naturalWidth * scale); cv.height = Math.round(img.naturalHeight * scale);
+      cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+      return await new Promise(res => cv.toBlob(b => res(b || file), "image/jpeg", 0.85));
+    } catch { return file; } finally { URL.revokeObjectURL(url); }
+  }
+
+  async function save(ev) {
+    ev.preventDefault();
+    const err = $("formErr"); err.textContent = "";
+    let sp = species === "_other" || !SPECIES.includes(species) ? $("speciesOther").value.trim() : species;
+    if (!sp) { err.textContent = "Pick a species."; return; }
+    sp = sp.charAt(0).toUpperCase() + sp.slice(1);
+    const lb = $("lb").value.trim(), oz = $("oz").value.trim(), plus = $("plus").checked;
+    if (lb === "" && oz === "") { err.textContent = "Add a weight. Use 0 lb if you didn't weigh it."; return; }
+    if (Number(oz) > 15 || Number(oz) < 0) { err.textContent = "Ounces must be 0 to 15."; return; }
+    const p = showCoords();
+    if (!p) { err.textContent = "Add where you caught it: pick a spot or paste coordinates."; return; }
+    if (!$("date").value || !$("time").value) { err.textContent = "Add the date and time."; return; }
+
+    const body = {
+      date: $("date").value, time: $("time").value, species: sp,
+      weight: weightText(lb, oz, plus), lb: Number(lb || 0), oz: Number(oz || 0), plus,
+      weight_lb: Math.round((Number(lb || 0) + Number(oz || 0) / 16) * 1000) / 1000,
+      lat: p.lat, lon: p.lon, spot: $("spot").value.trim(), bait: $("bait").value.trim(),
+      method: $("method").value.trim(), notes: $("notes").value.trim(),
+    };
+    const old = editing ? catches.find(c => c.id === editing) : null;
+    // Conditions depend on time and place; clear them if either changed.
+    const moved = !old || old.date !== body.date || old.time !== body.time || old.lat !== body.lat || old.lon !== body.lon;
+    body.conditions = moved ? null : (old.conditions ?? null);
+    body.photo = old ? (old.photo || "") : "";
+    body.created = old ? (old.created || new Date().toISOString()) : new Date().toISOString();
+
+    $("save").disabled = true; $("save").textContent = "Saving…";
+    try {
+      if (photoBlob && assets) {
+        try { body.photo = (await assets.upload(photoBlob, { type: "image/jpeg" })).id; }
+        catch (e) { err.textContent = "The photo didn't upload, so the fish was saved without it."; }
+      }
+      const ref = editing ? db.collection("catches").doc(editing) : db.collection("catches").doc();
+      await ref.set(body);
+      store.set("fj_species", sp); store.set("fj_bait", body.bait); store.set("fj_method", body.method);
+      if (!err.textContent) closeForm();
+    } catch (e) {
+      err.textContent = saveError(e);
+    } finally {
+      $("save").disabled = false; $("save").textContent = editing ? "Save changes" : "Save fish";
+    }
+  }
+
+  async function remove() {
+    if (!editing) return;
+    try { await db.collection("catches").doc(editing).delete(); closeForm(); }
+    catch { $("formErr").textContent = "That didn't delete. Try again."; }
+  }
+
+  // ---------- session form (collection "trips")
+  function knownMethods() {
+    // presets, then methods used before, then any just added on this form
+    const out = [...METHODS];
+    for (const t of [...trips].sort(byNewest)) for (const m of t.methods || []) if (!out.includes(m)) out.push(m);
+    for (const c of [...catches].sort(byNewest)) if (c.method && !out.includes(c.method)) out.push(c.method);
+    for (const m of tMethods) if (!out.includes(m)) out.push(m);
+    return out;
+  }
+
+  function lastMethods() {
+    try { const m = JSON.parse(store.get("fj_trip_methods") || "[]"); return Array.isArray(m) ? m : []; }
+    catch { return []; }
+  }
+
+  function drawMethods() {
+    const box = $("methodChips"); box.replaceChildren();
+    for (const m of knownMethods()) box.append(chip(m, tMethods.includes(m), () => {
+      tMethods = tMethods.includes(m) ? tMethods.filter(x => x !== m) : [...tMethods, m];
+      drawMethods();
+    }));
+  }
+
+  function addMethod() {
+    const v = $("tMethodNew").value.trim();
+    if (!v) return;
+    const m = v.charAt(0).toUpperCase() + v.slice(1);
+    if (!tMethods.includes(m)) tMethods.push(m);
+    $("tMethodNew").value = "";
+    drawMethods();
+  }
+
+  function drawHours() {
+    const box = $("hourChips"); box.replaceChildren();
+    for (const h of HOURS) box.append(chip(hoursText(h), Number($("tHours").value) === h, () => { $("tHours").value = h; drawHours(); }));
+    const end = endTime($("tTime").value, $("tHours").value);
+    $("tEnd").textContent = end ? `Until ${end}` : "";
+  }
+
+  function openTrip(t) {
+    closeForm();
+    editingTrip = t && t.id ? t.id : null;
+    $("tripTitle").textContent = t && t.id ? "Edit session" : "Log a session";
+    $("tSave").textContent = t && t.id ? "Save changes" : "Save session";
+    const now = nowParts();
+    $("tDate").value = t ? t.date : now.date;
+    $("tTime").value = t ? t.time : (store.get("fj_trip_start") || now.time);
+    $("tHours").value = t ? (t.hours ?? "") : (store.get("fj_trip_hours") || "");
+    tMethods = t ? [...(t.methods || [])] : lastMethods();
+    $("tMethodNew").value = "";
+    $("tCoords").value = t && typeof t.lat === "number" ? `${t.lat}, ${t.lon}` : "";
+    $("tSpot").value = t ? (t.spot || "") : "";
+    $("tBait").value = t ? (t.bait || "") : "";
+    $("tNotes").value = t ? (t.notes || "") : "";
+    $("tDel").hidden = !editingTrip; $("tConfirmDel").hidden = true; $("tErr").textContent = "";
+    drawHours(); drawMethods(); drawSpots(TRIP_SPOT); showCoords(TRIP_SPOT);
+    $("tripForm").hidden = false; $("starts").hidden = true;
+    $("tripForm").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function closeTrip() {
+    $("tripForm").hidden = true; $("starts").hidden = !canWrite; editingTrip = null;
+  }
+
+  async function saveTrip(ev) {
+    ev.preventDefault();
+    const err = $("tErr"); err.textContent = "";
+    if (!$("tDate").value || !$("tTime").value) { err.textContent = "Add the date and start time."; return; }
+    const hours = Number($("tHours").value);
+    if (!(hours > 0 && hours <= 48)) { err.textContent = "Add how many hours you fished."; return; }
+    addMethod();
+    if (!tMethods.length) { err.textContent = "Pick at least one method."; return; }
+    const hasCoords = $("tCoords").value.trim() !== "";
+    const p = showCoords(TRIP_SPOT);
+    if (hasCoords && !p) { err.textContent = "Those coordinates don't look right. Fix them or clear the box."; return; }
+
+    const body = {
+      date: $("tDate").value, time: $("tTime").value, hours, methods: [...tMethods],
+      lat: p ? p.lat : null, lon: p ? p.lon : null,
+      spot: $("tSpot").value.trim(), bait: $("tBait").value.trim(), notes: $("tNotes").value.trim(),
+    };
+    const old = editingTrip ? trips.find(t => t.id === editingTrip) : null;
+    // Conditions depend on time and place; clear them if either changed.
+    const moved = !old || old.date !== body.date || old.time !== body.time || old.lat !== body.lat || old.lon !== body.lon;
+    body.conditions = moved ? null : (old.conditions ?? null);
+    body.created = old ? (old.created || new Date().toISOString()) : new Date().toISOString();
+
+    $("tSave").disabled = true; $("tSave").textContent = "Saving…";
+    try {
+      const ref = editingTrip ? db.collection("trips").doc(editingTrip) : db.collection("trips").doc();
+      await ref.set(body);
+      store.set("fj_trip_start", body.time); store.set("fj_trip_hours", String(hours));
+      store.set("fj_trip_methods", JSON.stringify(body.methods));
+      closeTrip();
+    } catch (e) {
+      err.textContent = saveError(e);
+    } finally {
+      $("tSave").disabled = false; $("tSave").textContent = editingTrip ? "Save changes" : "Save session";
+    }
+  }
+
+  async function removeTrip() {
+    if (!editingTrip) return;
+    try { await db.collection("trips").doc(editingTrip).delete(); closeTrip(); }
+    catch { $("tErr").textContent = "That didn't delete. Try again."; }
+  }
+
+  function sessionOf(id) {
+    return sessions().find(x => (x.trip && x.trip.id === id) || x.fish.some(c => c.id === id));
+  }
+  function draftFromFish(id) {
+    // Turn a time-grouped session into a logged one: start at the first fish, round the hours up.
+    const x = sessionOf(id), f = x.fish[0];
+    const hours = Math.max(1, Math.ceil((x.end - x.start) / 3600e3 * 2) / 2);
+    const methods = [...new Set(x.fish.map(c => c.method).filter(Boolean))];
+    const bait = [...new Set(x.fish.map(c => c.bait).filter(Boolean))].join(", ");
+    return { date: f.date, time: f.time, hours, methods, lat: f.lat, lon: f.lon, spot: f.spot || "", bait, notes: "" };
+  }
+  function presetFor(id) {
+    // A new fish in a session: now if the session is still going, else at its last fish (or its start).
+    const x = sessionOf(id);
+    if (!x) return null;
+    const now = nowParts(), nowMs = Date.now();
+    const at = x.fish[x.fish.length - 1] || x.trip;
+    const live = nowMs >= x.start && nowMs <= x.end + SLACK;
+    const src = x.trip && typeof x.trip.lat === "number" ? x.trip : at;
+    return { date: live ? now.date : at.date, time: live ? now.time : at.time, lat: src.lat, lon: src.lon, spot: src.spot || "" };
+  }
+
+  // ---------- wiring
+  $("openTrip").addEventListener("click", () => openTrip(null));
+  $("tCancel").addEventListener("click", closeTrip);
+  $("tripForm").addEventListener("submit", saveTrip);
+  $("tTime").addEventListener("input", drawHours);
+  $("tHours").addEventListener("input", drawHours);
+  $("tMethodAdd").addEventListener("click", addMethod);
+  $("tMethodNew").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addMethod(); } });
+  $("tCoords").addEventListener("input", () => { showCoords(TRIP_SPOT); drawSpots(TRIP_SPOT); });
+  $("tDel").addEventListener("click", () => { $("tConfirmDel").hidden = false; });
+  $("tDelNo").addEventListener("click", () => { $("tConfirmDel").hidden = true; });
+  $("tDelYes").addEventListener("click", removeTrip);
+  $("openForm").addEventListener("click", () => openForm(null));
+  $("cancel").addEventListener("click", closeForm);
+  $("form").addEventListener("submit", save);
+  $("coords").addEventListener("input", () => { showCoords(); drawSpots(); });
+  $("speciesOther").addEventListener("input", () => { species = $("speciesOther").value.trim() || "_other"; });
+  $("bait").addEventListener("input", drawBaits);
+  $("del").addEventListener("click", () => { $("confirmDel").hidden = false; });
+  $("delNo").addEventListener("click", () => { $("confirmDel").hidden = true; });
+  $("delYes").addEventListener("click", remove);
+  $("photo").addEventListener("change", async () => {
+    const f = $("photo").files[0];
+    if (!f) { photoBlob = null; return; }
+    photoBlob = await shrinkPhoto(f);
+    $("photoPreview").src = URL.createObjectURL(photoBlob); $("photoPreview").hidden = false;
+  });
+  $("list").addEventListener("click", e => {
+    const id = e.target.closest("[data-edit]")?.dataset.edit;
+    if (id) openForm(catches.find(c => c.id === id));
+    const tid = e.target.closest("[data-edit-trip]")?.dataset.editTrip;
+    if (tid) openTrip(trips.find(t => t.id === tid));
+    const did = e.target.closest("[data-detail]")?.dataset.detail;
+    if (did) openTrip(draftFromFish(did));
+    const aid = e.target.closest("[data-add-to]")?.dataset.addTo;
+    if (aid) openForm(null, presetFor(aid));
+  });
+
+  // ---------- conditions for fish and sessions, worked out here and saved
+  function saveError(e) {
+    if (e && e.code === "bad_key") return "GitHub refused the save. Check the key at the bottom of the page.";
+    return "That didn't save. Check your signal and try again.";
+  }
+
+  let filling = false;
+  const tried = new Set();
+  function needsConditions(d) {
+    if (new Date(`${d.date}T${d.time}`) > new Date()) return false;       // not happened yet
+    const k = d.conditions;
+    if (!k) return true;
+    // Recent figures get revised: redo them once a day until they settle.
+    return !!k.data_note && k.added !== nowParts().date;
+  }
+  async function fillConditions() {
+    if (!canWrite || filling) return;
+    filling = true;
+    try {
+      for (const [name, list] of [["catches", catches], ["trips", trips]]) {
+        const todo = list.filter(d => !tried.has(d.id) && needsConditions(d)).slice(0, 10);
+        if (!todo.length) continue;
+        const patches = {};
+        for (const d of todo) {
+          tried.add(d.id);
+          try { patches[d.id] = { conditions: await Conditions.forCatch(d.date, d.time, d.lat, d.lon) }; }
+          catch (e) { console.warn("conditions failed for", d.id, e); }
+        }
+        if (Object.keys(patches).length) await db.collection(name).updateMany(patches);
+      }
+    } catch (e) {
+      console.warn("saving conditions failed", e);
+    } finally {
+      filling = false;
+    }
+  }
+
+  // ---------- saving key
+  async function showKey() {
+    const has = !!GitHubStore.token.get();
+    const ok = await GitHubStore.checkKey();
+    canWrite = has && ok !== false;
+    $("starts").hidden = !canWrite;
+    assets = canWrite ? GitHubStore.assets : null;
+    $("photoSet").hidden = !assets;
+    $("keyForget").hidden = !has;
+    $("keyHelp").open = !has;
+    $("keyState").textContent = !has ? "Not set up. You can look, but not save." :
+      ok === false ? "This key doesn't work. Make a new one and paste it below." :
+      ok === null ? "Key saved. Couldn't check it just now." : "Set up. This phone can save to the journal.";
+    $("keyState").className = ok === false ? "status" : "sub";
+    render();
+    fillConditions();
+  }
+  $("keySave").addEventListener("click", async () => {
+    const v = $("keyIn").value.trim();
+    if (!v) return;
+    GitHubStore.token.set(v); $("keyIn").value = "";
+    await showKey();
+  });
+  $("keyForget").addEventListener("click", () => { GitHubStore.token.clear(); showKey(); });
+
+  // ---------- start
+  $("nowRefresh").addEventListener("click", refreshNow);
+  document.addEventListener("visibilitychange", () => {
+    // Coming back to the page after a while: fetch fresh figures.
+    if (document.visibilityState === "visible" && nowDoc && Date.now() - new Date(nowDoc.updated) > 30 * 60e3) refreshNow();
+  });
+  setInterval(renderNow, 5 * 60e3);   // keeps the "updated" age honest
+  refreshNow();
+
+  db = GitHubStore.db;
+  const lost = () => {
+    $("status").hidden = false;
+    $("status").textContent = "Couldn't load the journal. Check your signal, then reload the page.";
+  };
+  db.collection("catches").onSnapshot(snap => {
+    catches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render(); fillConditions();
+  }, lost);
+  db.collection("trips").onSnapshot(snap => {
+    trips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render(); fillConditions();
+  }, lost);
+  showKey();
+})();
+</script>
+</body>
+</html>

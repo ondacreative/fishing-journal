@@ -1,0 +1,18 @@
+[
+ {
+  "id": "jpmcu76p107jyz99tmc3",
+  "bait": "Luncheon meat",
+  "conditions": null,
+  "created": "2026-10-09T16:14:34.133Z",
+  "date": "2026-10-09",
+  "hours": 2,
+  "lat": 52.853461,
+  "lon": -1.627493,
+  "methods": [
+   "Ledger"
+  ],
+  "notes": "",
+  "spot": "",
+  "time": "09:00"
+ }
+]
