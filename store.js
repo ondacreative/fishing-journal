@@ -126,17 +126,18 @@ const GitHubStore = (() => {
               if (i >= 0) list[i] = doc; else list.push(doc);
               return list;
             }, `${i18n(name)} ${body.species || body.date || ""} ${body.weight || body.time || ""}`.trim()),
-            update: patch => mutate(name, list => list.map(d => d.id === id ? { ...d, ...patch } : d), `Conditions for ${name}`),
-            delete: () => mutate(name, list => list.filter(d => d.id !== id), `Delete from ${name}`),
+            update: patch => mutate(name, list => list.map(d => d.id === id ? { ...d, ...patch } : d), `Conditions for ${label(name, 1)}`),
+            delete: () => mutate(name, list => list.filter(d => d.id !== id), `Delete ${label(name, 1)}`),
           };
         },
         // Several field updates in one save: {id: patch}
         updateMany: patches => mutate(name, list => list.map(d => patches[d.id] ? { ...d, ...patches[d.id] } : d),
-          `Conditions for ${Object.keys(patches).length} ${name}`),
+          `Conditions for ${Object.keys(patches).length} ${label(name, Object.keys(patches).length)}`),
       };
     },
   };
   const i18n = name => name === "catches" ? "Fish:" : "Session:";
+  const label = (name, n) => name === "catches" ? "fish" : n === 1 ? "session" : "sessions";
 
   const assets = {
     async upload(blob) {
