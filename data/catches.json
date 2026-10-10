@@ -124,5 +124,25 @@
   "time": "11:40",
   "weight": "4lb 6oz",
   "weight_lb": 4.375
+ },
+ {
+  "id": "mv215tx9sdg9fx",
+  "date": "2026-10-10",
+  "time": "07:30",
+  "species": "Chub",
+  "weight": "4lb 6oz",
+  "lb": 4,
+  "oz": 6,
+  "plus": false,
+  "weight_lb": 4.375,
+  "lat": 52.8543225,
+  "lon": -1.6272979,
+  "spot": "",
+  "bait": "Luncheon meat",
+  "method": "Ledger",
+  "notes": "",
+  "conditions": null,
+  "photo": "mv215q43q0q2gs.jpg",
+  "created": "2026-10-10T06:45:41.618Z"
  }
 ]
