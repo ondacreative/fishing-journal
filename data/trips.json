@@ -50,7 +50,29 @@
   "spot": "Marston-Bridge",
   "bait": "Luncheon meat",
   "notes": "",
-  "conditions": null,
+  "conditions": {
+   "level_m": 0.426,
+   "level_change_6h_cm": 0.2,
+   "level_change_24h_cm": -0.4,
+   "level_trend": "steady",
+   "level_vs_normal": "low",
+   "flow_m3s": null,
+   "air_temp_c": 8.4,
+   "pressure_hpa": 1021,
+   "pressure_change_24h": 4.3,
+   "wind_kmh": 10.8,
+   "wind_from": "W",
+   "cloud_pct": 5,
+   "rain_24h_mm": 6.8,
+   "rain_72h_mm": 7.1,
+   "sunrise": "07:34",
+   "sunset": "18:09",
+   "light": "0h 41m after sunrise",
+   "moon_pct": 27,
+   "moon_phase": "waxing",
+   "data_note": "Recent: figures may be revised slightly",
+   "added": "2026-10-16"
+  },
   "created": "2026-10-16T14:24:33.205Z"
  }
 ]
