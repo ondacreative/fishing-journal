@@ -36,5 +36,21 @@
   "notes": "",
   "spot": "",
   "time": "09:00"
+ },
+ {
+  "id": "mvb26xmdlzdlok",
+  "date": "2026-10-16",
+  "time": "08:15",
+  "hours": 3,
+  "methods": [
+   "Ledger"
+  ],
+  "lat": 52.8566456,
+  "lon": -1.6523621,
+  "spot": "Marston-Bridge",
+  "bait": "Luncheon meat",
+  "notes": "",
+  "conditions": null,
+  "created": "2026-10-16T14:24:33.205Z"
  }
 ]
