@@ -140,7 +140,8 @@ const Conditions = (() => {
   // ---------- right now, plus the barbel outlook
   async function now(normals) {
     const r = {};
-    const since = new Date(Date.now() - 2 * DAY).toISOString().slice(0, 19) + "Z";
+    // 5 days back: enough for the 24h change and for the level chart.
+    const since = new Date(Date.now() - 5 * DAY).toISOString().slice(0, 19) + "Z";
     const live = await getJson(`https://environment.data.gov.uk/flood-monitoring/id/stations/${GAUGE_LIVE}/readings`,
       { since, _sorted: "", _limit: 1000 });
     const rd = (live.items || []).filter(i => typeof i.value === "number")
@@ -156,8 +157,9 @@ const Conditions = (() => {
       r.level_vs_normal = vsNormal(last);
       const d = new Date(lastT);
       r.reading_at = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      r.level_series = rd;                                       // [[ms, metres]], oldest first
     } else {
-      Object.assign(r, { level_m: null, level_change_24h_cm: null, level_trend: "unknown", level_vs_normal: "unknown", reading_at: "" });
+      Object.assign(r, { level_m: null, level_change_24h_cm: null, level_trend: "unknown", level_vs_normal: "unknown", reading_at: "", level_series: [] });
     }
 
     const body = await getJson("https://api.open-meteo.com/v1/forecast", {
@@ -275,5 +277,5 @@ const Conditions = (() => {
     return { today: t.rating, reasons: t.reasons, lines, next: days.slice(1, 4).map(x => ({ day: x.day, rating: x.rating })) };
   }
 
-  return { forCatch, now, FRESH_DAYS };
+  return { forCatch, now, FRESH_DAYS, TYPICAL_LOW, TYPICAL_HIGH };
 })();

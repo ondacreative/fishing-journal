@@ -10,7 +10,7 @@
 
 const GitHubStore = (() => {
   const REPO = { owner: "ondacreative", repo: "fishing-journal", branch: "main" };
-  const FILES = { catches: "data/catches.json", trips: "data/trips.json" };
+  const FILES = { catches: "data/catches.json", trips: "data/trips.json", bites: "data/bites.json" };
   const TOKEN_KEY = "fj_github_token";
   const API = `https://api.github.com/repos/${REPO.owner}/${REPO.repo}`;
 
@@ -125,7 +125,7 @@ const GitHubStore = (() => {
               const doc = { id, ...body };
               if (i >= 0) list[i] = doc; else list.push(doc);
               return list;
-            }, `${i18n(name)} ${body.species || body.date || ""} ${body.weight || body.time || ""}`.trim()),
+            }, `${i18n(name, body)} ${body.species || body.date || ""} ${body.weight || body.time || ""}`.trim()),
             update: patch => mutate(name, list => list.map(d => d.id === id ? { ...d, ...patch } : d), `Conditions for ${label(name, 1)}`),
             delete: () => mutate(name, list => list.filter(d => d.id !== id), `Delete ${label(name, 1)}`),
           };
@@ -136,8 +136,8 @@ const GitHubStore = (() => {
       };
     },
   };
-  const i18n = name => name === "catches" ? "Fish:" : "Session:";
-  const label = (name, n) => name === "catches" ? "fish" : n === 1 ? "session" : "sessions";
+  const i18n = (name, body) => name === "catches" ? "Fish:" : name === "bites" ? (body.kind === "lost" ? "Lost fish:" : "Bite:") : "Session:";
+  const label = (name, n) => name === "catches" ? "fish" : name === "bites" ? (n === 1 ? "bite" : "bites") : n === 1 ? "session" : "sessions";
 
   const assets = {
     async upload(blob) {

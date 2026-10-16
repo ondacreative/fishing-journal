@@ -123,6 +123,35 @@
   .setup.done > summary { color: var(--muted); font-weight: 400; font-size: 0.9rem; }
   .setup ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
   .nowhead { display: flex; gap: 10px; align-items: center; }
+
+  /* River level chart, last 5 days */
+  .chart { display: grid; gap: 4px; }
+  .chart svg { display: block; width: 100%; height: 170px; touch-action: pan-y; }
+  .chart .read { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  .chart .axis { fill: var(--muted); font: 12px var(--font); }
+  .chart .grid { stroke: var(--line); stroke-width: 1; }
+  .chart .ref { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+  .chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+  .chart .area { fill: var(--accent); opacity: 0.1; }
+  .chart .fishdot { fill: var(--bronze); stroke: var(--card); stroke-width: 2; }
+  .chart .cross { stroke: var(--fg); stroke-width: 1; }
+  .chart .hot { fill: var(--accent); stroke: var(--card); stroke-width: 2; }
+  .key { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 0.85rem; }
+  .key i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--bronze); margin-right: 5px; }
+  .key s { display: inline-block; width: 16px; border-top: 1px dashed var(--muted); margin-right: 5px; vertical-align: middle; text-decoration: none; }
+
+  /* Bites and lost fish */
+  .biterow .fish { font-size: 1.1rem; }
+  .bitetag { color: var(--muted); font-weight: 700; }
+
+  /* Summary */
+  .sumcard { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 8px; }
+  .sumcard h3 { margin: 0; font-size: 1.1rem; }
+  .sumtable { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .sumtable th, .sumtable td { text-align: left; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); }
+  .sumtable th { color: var(--muted); font-weight: 400; font-size: 0.9rem; }
+  .sumtable td.n, .sumtable th.n { text-align: right; }
+  .sumlist { display: grid; gap: 12px; }
 </style>
 </head>
 <body>
@@ -146,19 +175,25 @@
 
   <div class="starts" id="starts" hidden>
     <button class="primary" id="openForm" type="button">+ Add a fish</button>
+    <button class="ghost wide" id="openBite" type="button">+ Bite or lost fish</button>
     <button class="ghost wide" id="openTrip" type="button">+ Log a session</button>
   </div>
 
   <form id="form" hidden novalidate>
     <h2 id="formTitle">Add a fish</h2>
 
+    <fieldset id="kindSet" hidden>
+      <legend>What happened</legend>
+      <div class="chips" id="kindChips"></div>
+    </fieldset>
+
     <fieldset>
-      <legend>Species</legend>
+      <legend id="speciesLegend">Species</legend>
       <div class="chips" id="speciesChips"></div>
       <input type="text" id="speciesOther" placeholder="Other species" hidden>
     </fieldset>
 
-    <fieldset>
+    <fieldset id="weightSet">
       <legend>Weight</legend>
       <div class="row3">
         <div><label class="lab" for="lb">lb</label><input type="number" id="lb" inputmode="numeric" min="0" max="99"></div>
@@ -213,7 +248,7 @@
       <button class="danger" type="button" id="del" hidden>Delete</button>
     </div>
     <div class="confirm" id="confirmDel" hidden>
-      <div>Delete this fish for good?</div>
+      <div id="confirmDelText">Delete this fish for good?</div>
       <div class="actions">
         <button class="danger" type="button" id="delYes">Yes, delete</button>
         <button class="ghost" type="button" id="delNo">Keep it</button>
@@ -292,6 +327,13 @@
   </section>
 
   <section>
+    <h2>Summary</h2>
+    <div class="chips" id="sumChips" style="margin-bottom: 12px"></div>
+    <div class="sumlist" id="summary"><div class="empty">Your totals will show here.</div></div>
+    <p class="hint">The season runs June to March. Sessions are counted in the month they start.</p>
+  </section>
+
+  <section>
     <h2>Sessions</h2>
     <div class="list" id="list">
       <div class="empty">No fish yet. Tap <b>Add a fish</b> after your next catch.</div>
@@ -341,6 +383,11 @@
   let editing = null;             // id being edited, or null
   let species = "", photoBlob = null;
   let trips = [];                 // logged sessions: [{id, date, time, hours, methods, ...}]
+  let bites = [];                 // bites and lost fish: [{id, kind: "bite"|"lost", date, time, species?, ...}]
+  let mode = "fish", kind = "bite";   // which the fish form is doing; bite kind
+  const KINDS = { bite: "Bite", lost: "Lost fish" };
+  const UNKNOWN = "Didn't see";
+  const isBite = c => !!c.kind;   // catches have no kind
   let editingTrip = null, tMethods = [];
   const METHODS = ["Feeder", "Link leger", "Trotting", "Float", "Freelining", "Lure"];
   const HOURS = [2, 3, 4, 6, 8];
@@ -375,7 +422,7 @@
   function spotsFromCatches() {
     // distinct places, newest first, merged within ~15 m
     const out = [];
-    for (const c of [...catches, ...trips].sort(byNewest)) {
+    for (const c of [...catches, ...bites, ...trips].sort(byNewest)) {
       if (typeof c.lat !== "number") continue;
       const near = out.find(s => Math.abs(s.lat - c.lat) < 0.00014 && Math.abs(s.lon - c.lon) < 0.00022);
       if (near) { if (!near.name && c.spot) near.name = c.spot; continue; }
@@ -401,10 +448,122 @@
     const parts = [n ? `${n} fish logged` : "No fish logged yet"];
     if (all.length) parts.push(`${all.length} ${all.length === 1 ? "session" : "sessions"}`);
     if (b) parts.push(`${b} blank`);
+    const nb = bites.filter(x => x.kind !== "lost").length, nl = bites.length - nb;
+    if (nb) parts.push(`${nb} ${nb === 1 ? "bite" : "bites"}`);
+    if (nl) parts.push(`${nl} lost`);
     $("count").textContent = parts.join(", ");
     renderBest();
+    renderSummary();
     renderList();
+    drawChart();
   }
+
+  // ---------- summary by season (June to March) or by month
+  let sumBy = store.get("fj_sum_by") || "season";
+  function periodOf(date) {
+    const y = Number(date.slice(0, 4)), m = Number(date.slice(5, 7));
+    if (sumBy === "month") {
+      const label = new Date(date.slice(0, 7) + "-15T12:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+      return { key: date.slice(0, 7), label };
+    }
+    // June onwards starts a season. Jan to May belong to the one that began the June before.
+    const s = m >= 6 ? y : y - 1;
+    return { key: String(s), label: `${s}/${String(s + 1).slice(2)} season` };
+  }
+  function renderSummary() {
+    const box = $("sumChips"); box.replaceChildren();
+    for (const [k, l] of [["season", "By season"], ["month", "By month"]])
+      box.append(chip(l, sumBy === k, () => { sumBy = k; store.set("fj_sum_by", k); renderSummary(); }));
+    const P = {};
+    const get = date => { const p = periodOf(date); return P[p.key] = P[p.key] || { ...p, fish: 0, sp: {}, sessions: 0, blanks: 0, hours: 0, bites: 0, lost: 0 }; };
+    for (const c of catches) {
+      const p = get(c.date); p.fish++;
+      const s = p.sp[c.species] = p.sp[c.species] || { n: 0, best: null };
+      s.n++;
+      if (isFinite(c.weight_lb) && (!s.best || c.weight_lb > s.best.weight_lb)) s.best = c;
+    }
+    for (const x of bites) { const p = get(x.date); if (x.kind === "lost") p.lost++; else p.bites++; }
+    for (const x of sessions()) {
+      const p = get(isoDate(new Date(x.start)));
+      p.sessions++;
+      if (!x.fish.length) p.blanks++;
+      if (x.trip) p.hours += Number(x.trip.hours || 0);
+    }
+    const list = Object.values(P).sort((a, b) => b.key.localeCompare(a.key));
+    if (!list.length) { $("summary").innerHTML = `<div class="empty">Your totals will show here.</div>`; return; }
+    const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    $("summary").innerHTML = list.map(p => {
+      const bits = [plural(p.fish, "fish", "fish"), plural(p.sessions, "session", "sessions")];
+      if (p.blanks) bits.push(plural(p.blanks, "blank", "blanks"));
+      if (p.bites) bits.push(plural(p.bites, "bite", "bites"));
+      if (p.lost) bits.push(`${p.lost} lost`);
+      const rows = Object.entries(p.sp).sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0]));
+      const table = rows.length ? `<table class="sumtable">
+          <thead><tr><th>Species</th><th class="n">Fish</th><th class="n">Best</th></tr></thead>
+          <tbody>${rows.map(([sp, s]) => `<tr><td>${esc(sp)}</td><td class="n">${s.n}</td><td class="n">${s.best ? esc(s.best.weight) : "–"}</td></tr>`).join("")}</tbody>
+        </table>` : "";
+      const hrs = p.hours ? `<div class="sub">${esc(hoursText(p.hours))} logged in sessions</div>` : "";
+      return `<div class="sumcard"><h3>${esc(p.label)}</h3><div>${bits.join(" · ")}</div>${hrs}${table}</div>`;
+    }).join("");
+  }
+
+  // ---------- river level chart, last 5 days
+  function drawChart() {
+    const box = $("levelChart");
+    const S = nowDoc && nowDoc.level_series;
+    if (!box || !S || S.length < 2) return;
+    const W = Math.max(280, box.clientWidth || 320), H = 170;
+    const L = 40, R = 8, T = 10, B = 24;
+    const t0 = S[0][0], t1 = S[S.length - 1][0];
+    let lo = Math.min(...S.map(p => p[1])), hi = Math.max(...S.map(p => p[1]));
+    const padM = Math.max(0.05, (hi - lo) * 0.15); lo -= padM; hi += padM;
+    const x = t => L + (t - t0) / (t1 - t0) * (W - L - R);
+    const y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+    // y ticks on a tidy step
+    const step = [0.05, 0.1, 0.2, 0.25, 0.5, 1].find(s => (hi - lo) / s <= 4) || 1;
+    const yt = []; for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) yt.push(Math.round(v * 100) / 100);
+    // x ticks at each midnight
+    const xt = []; const d = new Date(t0); d.setHours(24, 0, 0, 0);
+    for (; d.getTime() < t1; d.setDate(d.getDate() + 1)) xt.push(d.getTime());
+    const path = S.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+    const area = `${path}L${x(t1).toFixed(1)},${H - B}L${x(t0).toFixed(1)},${H - B}Z`;
+    const refs = [[Conditions.TYPICAL_LOW, "typical low"], [Conditions.TYPICAL_HIGH, "typical high"]].filter(([v]) => v > lo && v < hi);
+    // fish caught in the window, placed on the line
+    const nearest = t => S.reduce((a, p) => Math.abs(p[0] - t) < Math.abs(a[0] - t) ? p : a);
+    const fish = catches.map(c => ms(c.date, c.time)).filter(t => t >= t0 && t <= t1);
+    const dayName = t => new Date(t).toLocaleDateString("en-GB", { weekday: "short" });
+    box.innerHTML = `<div class="read" id="chartRead"></div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="River level over the last 5 days">
+        ${yt.map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v.toFixed(2)}</text>`).join("")}
+        ${xt.map(t => `<line class="grid" x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H - B}"/><text class="axis" x="${x(t) + 4}" y="${H - 6}">${dayName(t)}</text>`).join("")}
+        ${refs.map(([v]) => `<line class="ref" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>`).join("")}
+        <path class="area" d="${area}"/><path class="line" d="${path}"/>
+        ${fish.map(t => { const p = nearest(t); return `<circle class="fishdot" r="5" cx="${x(p[0])}" cy="${y(p[1])}"/>`; }).join("")}
+        <line class="cross" id="chartCross" y1="${T}" y2="${H - B}" style="display:none"/>
+        <circle class="hot" id="chartHot" r="5" style="display:none"/>
+        <rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent" id="chartHit"/>
+      </svg>
+      <div class="key"><span>Metres at Marston on Dove</span>${fish.length ? `<span><i></i>Fish caught</span>` : ""}${refs.length ? `<span><s></s>${refs.map(r => r[1]).join(", ")}</span>` : ""}</div>`;
+    const read = p => {
+      const dt = new Date(p[0]);
+      $("chartRead").innerHTML = `<b>River, last 5 days:</b> ${p[1].toFixed(2)} m <span class="sub">${esc(dayName(p[0]))} ${pad(dt.getHours())}:${pad(dt.getMinutes())}</span>`;
+    };
+    read(S[S.length - 1]);
+    const hit = $("chartHit"), cross = $("chartCross"), hot = $("chartHot"), svg = hit.ownerSVGElement;
+    const move = e => {
+      const r = svg.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width * W;
+      const p = nearest(t0 + (px - L) / (W - L - R) * (t1 - t0));
+      cross.setAttribute("x1", x(p[0])); cross.setAttribute("x2", x(p[0])); cross.style.display = "";
+      hot.setAttribute("cx", x(p[0])); hot.setAttribute("cy", y(p[1])); hot.style.display = "";
+      read(p);
+    };
+    hit.addEventListener("pointermove", move);
+    hit.addEventListener("pointerdown", move);
+    hit.addEventListener("pointerleave", () => { cross.style.display = "none"; hot.style.display = "none"; read(S[S.length - 1]); });
+  }
+  let resizeT;
+  window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(drawChart, 150); });
 
   function renderBest() {
     const best = {};
@@ -461,7 +620,9 @@
       ? `<div class="stale">This is ${Math.round(age.hours)} ${Math.round(age.hours) === 1 ? "hour" : "hours"} old. Tap Refresh.</div>` : "";
     $("nowBody").innerHTML = `${stale}${barbel}${head}
       <div class="nowlines">${lines.map(l => `<div>${l}</div>`).join("")}</div>
+      <div class="chart" id="levelChart"></div>
       <details><summary>More</summary>${more}${conditionsHtml(k)}</details>`;
+    drawChart();
   }
 
   async function refreshNow() {
@@ -512,25 +673,28 @@
   // Fish outside any logged session are grouped by time: gaps under 4 hours chain together.
   const SLACK = 30 * 60e3, GAP = 4 * 3600e3;
   const ms = (date, time) => new Date(`${date}T${time || "00:00"}`).getTime();
+  // Bites and lost fish group the same way. x.events holds both, x.fish only landed fish.
   function sessions() {
-    const logged = trips.map(t => ({ trip: t, start: ms(t.date, t.time), end: ms(t.date, t.time) + Number(t.hours || 0) * 3600e3, fish: [] }));
+    const logged = trips.map(t => ({ trip: t, start: ms(t.date, t.time), end: ms(t.date, t.time) + Number(t.hours || 0) * 3600e3, events: [] }));
     const loose = [];
-    for (const c of [...catches].sort((a, b) => ms(a.date, a.time) - ms(b.date, b.time))) {
+    for (const c of [...catches, ...bites].sort((a, b) => ms(a.date, a.time) - ms(b.date, b.time))) {
       const m = ms(c.date, c.time);
       const home = logged.find(x => m >= x.start && m <= x.end) || logged.find(x => m >= x.start - SLACK && m <= x.end + SLACK);
-      if (home) home.fish.push(c); else loose.push(c);
+      if (home) home.events.push(c); else loose.push(c);
     }
     const auto = [];
     for (const c of loose) {
       const m = ms(c.date, c.time), last = auto[auto.length - 1];
-      if (last && m - last.end <= GAP) { last.fish.push(c); last.end = m; }
-      else auto.push({ trip: null, start: m, end: m, fish: [c] });
+      if (last && m - last.end <= GAP) { last.events.push(c); last.end = m; }
+      else auto.push({ trip: null, start: m, end: m, events: [c] });
     }
-    return [...logged, ...auto].sort((a, b) => b.start - a.start);
+    const all = [...logged, ...auto];
+    for (const x of all) { x.fish = x.events.filter(c => !isBite(c)); x.bites = x.events.filter(isBite); }
+    return all.sort((a, b) => b.start - a.start);
   }
 
   function renderList() {
-    if (!catches.length && !trips.length) {
+    if (!catches.length && !trips.length && !bites.length) {
       $("list").innerHTML = `<div class="empty">No fish yet. Tap <b>Add a fish</b> after your next catch.</div>`;
       return;
     }
@@ -557,27 +721,43 @@
     </div>`;
   }
 
+  function biteRow(c) {
+    const extra = [c.bait, c.method, c.spot].filter(Boolean).map(esc).join(" · ");
+    const edit = canWrite ? `<button class="ghost" type="button" data-edit-bite="${esc(c.id)}">Edit</button>` : "";
+    return `<div class="fishrow biterow">
+      <div class="top"><div>
+        <div class="fish"><span class="bitetag">${esc(KINDS[c.kind] || "Bite")}</span>${c.species ? ` · ${esc(c.species)}` : ""}</div>
+        <div class="when">${esc(c.time)}${extra ? ` · ${extra}` : ""}</div>
+      </div>${edit}</div>
+      ${c.notes ? `<div>${esc(c.notes)}</div>` : ""}
+      <details><summary>Conditions at ${esc(c.time)}</summary>${conditionsHtml(c.conditions)}</details>
+    </div>`;
+  }
+
   function sessionCard(x, best) {
-    const t = x.trip, n = x.fish.length, first = t || x.fish[0];
+    const t = x.trip, n = x.fish.length, ev = x.events, first = t || ev[0];
     let when;
     if (t) {
       const end = endTime(t.time, t.hours);
       when = `${esc(t.time)}${end ? ` to ${esc(end)}` : ""}${t.hours ? `, ${esc(hoursText(t.hours))}` : ""}`;
     } else {
-      when = n > 1 ? `${esc(x.fish[0].time)} to ${esc(x.fish[n - 1].time)}` : esc(x.fish[0].time);
+      when = ev.length > 1 ? `${esc(ev[0].time)} to ${esc(ev[ev.length - 1].time)}` : esc(ev[0].time);
     }
-    const what = n ? `${n} fish` : "Blank";
+    const nl = x.bites.filter(b => b.kind === "lost").length, nb = x.bites.length - nl;
+    const what = [n ? `${n} fish` : "Blank", nb ? `${nb} ${nb === 1 ? "bite" : "bites"}` : "", nl ? `${nl} lost` : ""].filter(Boolean).join(", ");
     const methods = t ? (t.methods || []).map(esc).join(", ") : "";
     const extra = t ? [t.spot, t.bait].filter(Boolean).map(esc).join(" · ") : "";
-    const ref = t ? `data-edit-trip="${esc(t.id)}"` : `data-detail="${esc(x.fish[0].id)}"`;
+    const ref = t ? `data-edit-trip="${esc(t.id)}"` : `data-detail="${esc(ev[0].id)}"`;
     const edit = canWrite ? `<button class="ghost" type="button" ${ref}>${t ? "Edit" : "Add details"}</button>` : "";
-    const map = t && typeof t.lat === "number" && !n ? `<div class="links"><a href="https://www.google.com/maps?q=${t.lat},${t.lon}" target="_blank" rel="noopener">Open in Maps</a></div>` : "";
+    const map = t && typeof t.lat === "number" && !ev.length ? `<div class="links"><a href="https://www.google.com/maps?q=${t.lat},${t.lon}" target="_blank" rel="noopener">Open in Maps</a></div>` : "";
     // A time-grouped session starts at its first fish, so that fish's conditions are the start conditions.
-    const k = t ? t.conditions : x.fish[0].conditions;
-    const startTime = t ? t.time : x.fish[0].time;
+    const k = t ? t.conditions : ev[0].conditions;
+    const startTime = t ? t.time : ev[0].time;
     const cond = `<div class="startk">${conditionsLine(k)}</div>
       ${k ? `<details><summary>All conditions at ${esc(startTime)}</summary>${conditionsHtml(k)}</details>` : ""}`;
-    const add = canWrite ? `<div><button class="ghost" type="button" data-add-to="${esc(t ? t.id : x.fish[0].id)}">+ Add a fish to this session</button></div>` : "";
+    const sid = esc(t ? t.id : ev[0].id);
+    const add = canWrite ? `<div class="actions"><button class="ghost" type="button" data-add-to="${sid}">+ Add a fish</button>
+      <button class="ghost" type="button" data-add-bite-to="${sid}">+ Bite or lost fish</button></div>` : "";
     return `<article class="catch${n ? "" : " blank"}">
       <div class="top"><div>
         <div class="sess">${esc(dayLabel(first.date))}</div>
@@ -588,7 +768,7 @@
       </div>${edit}</div>
       ${t && t.notes ? `<div>${esc(t.notes)}</div>` : ""}
       ${cond}${map}
-      ${x.fish.map(c => fishRow(c, best)).join("")}
+      ${ev.map(c => isBite(c) ? biteRow(c) : fishRow(c, best)).join("")}
       ${add}
     </article>`;
   }
@@ -602,9 +782,16 @@
     return b;
   }
 
+  function drawKinds() {
+    const box = $("kindChips"); box.replaceChildren();
+    for (const [k, l] of Object.entries(KINDS)) box.append(chip(l, kind === k, () => { kind = k; drawKinds(); }));
+  }
+
   function drawSpecies() {
     const box = $("speciesChips"); box.replaceChildren();
     const known = SPECIES.includes(species);
+    // A bite often comes with no fish seen: that's the first choice, saved as no species.
+    if (mode === "bite") box.append(chip(UNKNOWN, !species, () => { species = ""; $("speciesOther").hidden = true; drawSpecies(); }));
     for (const s of SPECIES) box.append(chip(s, species === s, () => { species = s; $("speciesOther").hidden = true; drawSpecies(); }));
     box.append(chip("Other", !!species && !known, () => { species = $("speciesOther").value.trim() || "_other"; $("speciesOther").hidden = false; $("speciesOther").focus(); drawSpecies(); }));
     if (species && !known) $("speciesOther").hidden = false;
@@ -627,7 +814,7 @@
   function drawBaits() {
     const box = $("baitChips"); box.replaceChildren();
     const seen = [];
-    for (const c of [...catches].sort(byNewest)) if (c.bait && !seen.includes(c.bait)) seen.push(c.bait);
+    for (const c of [...catches, ...bites].sort(byNewest)) if (c.bait && !seen.includes(c.bait)) seen.push(c.bait);
     for (const b of seen.slice(0, 6)) box.append(chip(b, $("bait").value === b, () => { $("bait").value = b; drawBaits(); }));
   }
 
@@ -641,13 +828,20 @@
     return p;
   }
 
-  function openForm(c, preset) {
+  const saveLabel = () => editing ? "Save changes" : mode === "bite" ? "Save" : "Save fish";
+  function openForm(c, preset, m) {
+    mode = m || (c && isBite(c) ? "bite" : "fish");
+    const b = mode === "bite";
     editing = c ? c.id : null;
-    $("formTitle").textContent = c ? "Edit fish" : "Add a fish";
-    $("save").textContent = c ? "Save changes" : "Save fish";
+    $("formTitle").textContent = b ? (c ? "Edit bite or lost fish" : "Bite or lost fish") : (c ? "Edit fish" : "Add a fish");
+    $("save").textContent = saveLabel();
+    kind = c && c.kind ? c.kind : "bite";
+    $("kindSet").hidden = !b; $("weightSet").hidden = b;
+    $("speciesLegend").textContent = b ? "Species (if you saw it)" : "Species";
+    $("confirmDelText").textContent = b ? "Delete this for good?" : "Delete this fish for good?";
     const now = nowParts();
-    species = c ? c.species : (store.get("fj_species") || "Chub");
-    $("speciesOther").value = c && !SPECIES.includes(c.species) ? c.species : "";
+    species = c ? (c.species || "") : b ? "" : (store.get("fj_species") || "Chub");
+    $("speciesOther").value = c && c.species && !SPECIES.includes(c.species) ? c.species : "";
     $("lb").value = c ? (c.lb ?? "") : "";
     $("oz").value = c ? (c.oz ?? "") : "";
     $("plus").checked = c ? !!c.plus : false;
@@ -660,10 +854,11 @@
     $("method").value = c ? (c.method || "") : (store.get("fj_method") || "");
     $("notes").value = c ? (c.notes || "") : "";
     $("photo").value = ""; photoBlob = null;
+    $("photoSet").hidden = !assets || b;
     $("photoPreview").hidden = !(c && c.photo);
     if (c && c.photo) $("photoPreview").src = GitHubStore.photoUrl(c.photo);
     $("del").hidden = !c; $("confirmDel").hidden = true; $("formErr").textContent = "";
-    drawSpecies(); drawSpots(); drawBaits(); showCoords();
+    drawKinds(); drawSpecies(); drawSpots(); drawBaits(); showCoords();
     closeTrip();
     $("form").hidden = false; $("starts").hidden = true;
     $("form").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -689,50 +884,56 @@
   async function save(ev) {
     ev.preventDefault();
     const err = $("formErr"); err.textContent = "";
-    let sp = species === "_other" || !SPECIES.includes(species) ? $("speciesOther").value.trim() : species;
-    if (!sp) { err.textContent = "Pick a species."; return; }
-    sp = sp.charAt(0).toUpperCase() + sp.slice(1);
+    const b = mode === "bite", coll = b ? "bites" : "catches";
+    let sp = !species ? "" : species === "_other" || !SPECIES.includes(species) ? $("speciesOther").value.trim() : species;
+    if (!sp && !b) { err.textContent = "Pick a species."; return; }
+    if (sp) sp = sp.charAt(0).toUpperCase() + sp.slice(1);
     const lb = $("lb").value.trim(), oz = $("oz").value.trim(), plus = $("plus").checked;
-    if (lb === "" && oz === "") { err.textContent = "Add a weight. Use 0 lb if you didn't weigh it."; return; }
-    if (Number(oz) > 15 || Number(oz) < 0) { err.textContent = "Ounces must be 0 to 15."; return; }
+    if (!b && lb === "" && oz === "") { err.textContent = "Add a weight. Use 0 lb if you didn't weigh it."; return; }
+    if (!b && (Number(oz) > 15 || Number(oz) < 0)) { err.textContent = "Ounces must be 0 to 15."; return; }
     const p = showCoords();
-    if (!p) { err.textContent = "Add where you caught it: pick a spot or paste coordinates."; return; }
+    if (!p) { err.textContent = "Add where you were: pick a spot or paste coordinates."; return; }
     if (!$("date").value || !$("time").value) { err.textContent = "Add the date and time."; return; }
 
-    const body = {
+    const body = b ? {
+      date: $("date").value, time: $("time").value, kind, species: sp,
+      lat: p.lat, lon: p.lon, spot: $("spot").value.trim(), bait: $("bait").value.trim(),
+      method: $("method").value.trim(), notes: $("notes").value.trim(),
+    } : {
       date: $("date").value, time: $("time").value, species: sp,
       weight: weightText(lb, oz, plus), lb: Number(lb || 0), oz: Number(oz || 0), plus,
       weight_lb: Math.round((Number(lb || 0) + Number(oz || 0) / 16) * 1000) / 1000,
       lat: p.lat, lon: p.lon, spot: $("spot").value.trim(), bait: $("bait").value.trim(),
       method: $("method").value.trim(), notes: $("notes").value.trim(),
     };
-    const old = editing ? catches.find(c => c.id === editing) : null;
+    const old = editing ? (b ? bites : catches).find(c => c.id === editing) : null;
     // Conditions depend on time and place; clear them if either changed.
     const moved = !old || old.date !== body.date || old.time !== body.time || old.lat !== body.lat || old.lon !== body.lon;
     body.conditions = moved ? null : (old.conditions ?? null);
-    body.photo = old ? (old.photo || "") : "";
+    if (!b) body.photo = old ? (old.photo || "") : "";
     body.created = old ? (old.created || new Date().toISOString()) : new Date().toISOString();
 
     $("save").disabled = true; $("save").textContent = "Saving…";
     try {
-      if (photoBlob && assets) {
+      if (!b && photoBlob && assets) {
         try { body.photo = (await assets.upload(photoBlob, { type: "image/jpeg" })).id; }
         catch (e) { err.textContent = "The photo didn't upload, so the fish was saved without it."; }
       }
-      const ref = editing ? db.collection("catches").doc(editing) : db.collection("catches").doc();
+      const ref = editing ? db.collection(coll).doc(editing) : db.collection(coll).doc();
       await ref.set(body);
-      store.set("fj_species", sp); store.set("fj_bait", body.bait); store.set("fj_method", body.method);
+      if (!b) store.set("fj_species", sp);
+      store.set("fj_bait", body.bait); store.set("fj_method", body.method);
       if (!err.textContent) closeForm();
     } catch (e) {
       err.textContent = saveError(e);
     } finally {
-      $("save").disabled = false; $("save").textContent = editing ? "Save changes" : "Save fish";
+      $("save").disabled = false; $("save").textContent = saveLabel();
     }
   }
 
   async function remove() {
     if (!editing) return;
-    try { await db.collection("catches").doc(editing).delete(); closeForm(); }
+    try { await db.collection(mode === "bite" ? "bites" : "catches").doc(editing).delete(); closeForm(); }
     catch { $("formErr").textContent = "That didn't delete. Try again."; }
   }
 
@@ -844,14 +1045,14 @@
   }
 
   function sessionOf(id) {
-    return sessions().find(x => (x.trip && x.trip.id === id) || x.fish.some(c => c.id === id));
+    return sessions().find(x => (x.trip && x.trip.id === id) || x.events.some(c => c.id === id));
   }
   function draftFromFish(id) {
     // Turn a time-grouped session into a logged one: start at the first fish, round the hours up.
-    const x = sessionOf(id), f = x.fish[0];
+    const x = sessionOf(id), f = x.events[0];
     const hours = Math.max(1, Math.ceil((x.end - x.start) / 3600e3 * 2) / 2);
-    const methods = [...new Set(x.fish.map(c => c.method).filter(Boolean))];
-    const bait = [...new Set(x.fish.map(c => c.bait).filter(Boolean))].join(", ");
+    const methods = [...new Set(x.events.map(c => c.method).filter(Boolean))];
+    const bait = [...new Set(x.events.map(c => c.bait).filter(Boolean))].join(", ");
     return { date: f.date, time: f.time, hours, methods, lat: f.lat, lon: f.lon, spot: f.spot || "", bait, notes: "" };
   }
   function presetFor(id) {
@@ -859,7 +1060,7 @@
     const x = sessionOf(id);
     if (!x) return null;
     const now = nowParts(), nowMs = Date.now();
-    const at = x.fish[x.fish.length - 1] || x.trip;
+    const at = x.events[x.events.length - 1] || x.trip;
     const live = nowMs >= x.start && nowMs <= x.end + SLACK;
     const src = x.trip && typeof x.trip.lat === "number" ? x.trip : at;
     return { date: live ? now.date : at.date, time: live ? now.time : at.time, lat: src.lat, lon: src.lon, spot: src.spot || "" };
@@ -878,6 +1079,7 @@
   $("tDelNo").addEventListener("click", () => { $("tConfirmDel").hidden = true; });
   $("tDelYes").addEventListener("click", removeTrip);
   $("openForm").addEventListener("click", () => openForm(null));
+  $("openBite").addEventListener("click", () => openForm(null, null, "bite"));
   $("cancel").addEventListener("click", closeForm);
   $("form").addEventListener("submit", save);
   $("coords").addEventListener("input", () => { showCoords(); drawSpots(); });
@@ -901,6 +1103,10 @@
     if (did) openTrip(draftFromFish(did));
     const aid = e.target.closest("[data-add-to]")?.dataset.addTo;
     if (aid) openForm(null, presetFor(aid));
+    const bid = e.target.closest("[data-edit-bite]")?.dataset.editBite;
+    if (bid) openForm(bites.find(c => c.id === bid));
+    const abid = e.target.closest("[data-add-bite-to]")?.dataset.addBiteTo;
+    if (abid) openForm(null, presetFor(abid), "bite");
   });
 
   // ---------- conditions for fish and sessions, worked out here and saved
@@ -922,7 +1128,7 @@
     if (!canWrite || filling) return;
     filling = true;
     try {
-      for (const [name, list] of [["catches", catches], ["trips", trips]]) {
+      for (const [name, list] of [["catches", catches], ["trips", trips], ["bites", bites]]) {
         const todo = list.filter(d => !tried.has(d.id) && needsConditions(d)).slice(0, 10);
         if (!todo.length) continue;
         const patches = {};
@@ -947,7 +1153,7 @@
     canWrite = has && ok !== false;
     $("starts").hidden = !canWrite;
     assets = canWrite ? GitHubStore.assets : null;
-    $("photoSet").hidden = !assets;
+    $("photoSet").hidden = !assets || mode === "bite";
     $("keyForget").hidden = !has;
     $("keyHelp").open = !has;
     $("keyState").textContent = !has ? "Not set up. You can look, but not save." :
@@ -986,6 +1192,10 @@
   };
   db.collection("catches").onSnapshot(snap => {
     catches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render(); fillConditions();
+  }, lost);
+  db.collection("bites").onSnapshot(snap => {
+    bites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     render(); fillConditions();
   }, lost);
   db.collection("trips").onSnapshot(snap => {
