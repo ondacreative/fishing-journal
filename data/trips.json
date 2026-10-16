@@ -8,7 +8,7 @@
    "level_change_24h_cm": -0.8,
    "level_trend": "steady",
    "level_vs_normal": "low",
-   "flow_m3s": null,
+   "flow_m3s": 3.43,
    "air_temp_c": 15.5,
    "pressure_hpa": 1007,
    "pressure_change_24h": -14.4,
@@ -23,7 +23,7 @@
    "moon_pct": 4,
    "moon_phase": "waning",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-12"
+   "added": "2026-10-16"
   },
   "created": "2026-10-09T16:14:34.133Z",
   "date": "2026-10-09",
