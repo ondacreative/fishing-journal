@@ -212,6 +212,7 @@
 
     <fieldset>
       <legend>Where</legend>
+      <button class="ghost wide" type="button" id="gps">Use my location</button>
       <div class="chips" id="spotChips"></div>
       <label class="lab" for="coords">Or paste coordinates</label>
       <input type="text" id="coords" placeholder="52.853153, -1.630004" autocomplete="off">
@@ -290,6 +291,7 @@
 
     <fieldset>
       <legend>Where (optional)</legend>
+      <button class="ghost wide" type="button" id="tGps">Use my location</button>
       <div class="chips" id="tSpotChips"></div>
       <label class="lab" for="tCoords">Or paste coordinates</label>
       <input type="text" id="tCoords" placeholder="52.853153, -1.630004" autocomplete="off">
@@ -392,8 +394,8 @@
   const METHODS = ["Feeder", "Link leger", "Trotting", "Float", "Freelining", "Lure"];
   const HOURS = [2, 3, 4, 6, 8];
   // The two forms share the spot picker; these are each form's element ids.
-  const FISH_SPOT = { box: "spotChips", coords: "coords", msg: "coordsMsg", spot: "spot", first: "Same spot as last fish" };
-  const TRIP_SPOT = { box: "tSpotChips", coords: "tCoords", msg: "tCoordsMsg", spot: "tSpot", first: "Same spot as last time" };
+  const FISH_SPOT = { box: "spotChips", coords: "coords", msg: "coordsMsg", spot: "spot", gps: "gps", first: "Same spot as last fish" };
+  const TRIP_SPOT = { box: "tSpotChips", coords: "tCoords", msg: "tCoordsMsg", spot: "tSpot", gps: "tGps", first: "Same spot as last time" };
 
   // ---------- helpers
   const pad = n => String(n).padStart(2, "0");
@@ -818,6 +820,25 @@
     for (const b of seen.slice(0, 6)) box.append(chip(b, $("bait").value === b, () => { $("bait").value = b; drawBaits(); }));
   }
 
+  // Fill the pin from the phone's GPS.
+  function useMyLocation(f) {
+    const btn = $(f.gps), msg = $(f.msg);
+    if (!navigator.geolocation) { msg.textContent = "This phone can't share its location. Paste coordinates instead."; msg.className = "spoterr"; return; }
+    btn.disabled = true; btn.textContent = "Finding you…";
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      $(f.coords).value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      showCoords(f); drawSpots(f);
+      msg.textContent += `, to within ${Math.round(accuracy)} m`;
+      btn.disabled = false; btn.textContent = "Use my location";
+    }, e => {
+      msg.textContent = e.code === 1 ? "Location is blocked. Allow it for this page in your browser settings, or paste coordinates."
+        : "Couldn't get your location. Try again outside, or paste coordinates.";
+      msg.className = "spoterr";
+      btn.disabled = false; btn.textContent = "Use my location";
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 30000 });
+  }
+
   function showCoords(f = FISH_SPOT) {
     const msg = $(f.msg);
     const v = $(f.coords).value.trim();
@@ -1075,6 +1096,8 @@
   $("tMethodAdd").addEventListener("click", addMethod);
   $("tMethodNew").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addMethod(); } });
   $("tCoords").addEventListener("input", () => { showCoords(TRIP_SPOT); drawSpots(TRIP_SPOT); });
+  $("tGps").addEventListener("click", () => useMyLocation(TRIP_SPOT));
+  $("gps").addEventListener("click", () => useMyLocation(FISH_SPOT));
   $("tDel").addEventListener("click", () => { $("tConfirmDel").hidden = false; });
   $("tDelNo").addEventListener("click", () => { $("tConfirmDel").hidden = true; });
   $("tDelYes").addEventListener("click", removeTrip);
