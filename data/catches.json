@@ -162,7 +162,7 @@
    "moon_pct": 1,
    "moon_phase": "waning",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-16"
+   "added": "2026-10-17"
   },
   "photo": "mv215q43q0q2gs.jpg",
   "created": "2026-10-10T06:45:41.618Z"
@@ -184,18 +184,18 @@
   "method": "Ledger",
   "notes": "",
   "conditions": {
-   "level_m": 0.427,
-   "level_change_6h_cm": 0.2,
-   "level_change_24h_cm": -0.3,
+   "level_m": 0.43,
+   "level_change_6h_cm": 0.5,
+   "level_change_24h_cm": 0,
    "level_trend": "steady",
    "level_vs_normal": "low",
    "flow_m3s": null,
-   "air_temp_c": 9.6,
+   "air_temp_c": 9.4,
    "pressure_hpa": 1021,
-   "pressure_change_24h": 4.4,
-   "wind_kmh": 13.7,
+   "pressure_change_24h": 4.8,
+   "wind_kmh": 13.2,
    "wind_from": "W",
-   "cloud_pct": 6,
+   "cloud_pct": 5,
    "rain_24h_mm": 6.8,
    "rain_72h_mm": 6.9,
    "sunrise": "07:34",
@@ -204,7 +204,7 @@
    "moon_pct": 27,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-16"
+   "added": "2026-10-17"
   },
   "photo": "mvar6mlvg38v5p.jpg",
   "created": "2026-10-16T08:52:00.644Z"
@@ -226,18 +226,18 @@
   "method": "Ledger",
   "notes": "",
   "conditions": {
-   "level_m": 0.429,
-   "level_change_6h_cm": 0.4,
-   "level_change_24h_cm": 0,
+   "level_m": 0.43,
+   "level_change_6h_cm": 0.5,
+   "level_change_24h_cm": 0.1,
    "level_trend": "steady",
    "level_vs_normal": "low",
    "flow_m3s": null,
-   "air_temp_c": 11,
+   "air_temp_c": 10.8,
    "pressure_hpa": 1022,
-   "pressure_change_24h": 4.8,
-   "wind_kmh": 13.5,
+   "pressure_change_24h": 5.2,
+   "wind_kmh": 11.6,
    "wind_from": "W",
-   "cloud_pct": 10,
+   "cloud_pct": 18,
    "rain_24h_mm": 6.8,
    "rain_72h_mm": 6.8,
    "sunrise": "07:34",
@@ -246,7 +246,7 @@
    "moon_pct": 27,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-16"
+   "added": "2026-10-17"
   },
   "photo": "mvar7m9edzraiz.jpg",
   "created": "2026-10-16T09:06:33.747Z"
