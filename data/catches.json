@@ -162,7 +162,7 @@
    "moon_pct": 1,
    "moon_phase": "waning",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-17"
+   "added": "2026-10-18"
   },
   "photo": "mv215q43q0q2gs.jpg",
   "created": "2026-10-10T06:45:41.618Z"
@@ -204,7 +204,7 @@
    "moon_pct": 27,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-17"
+   "added": "2026-10-18"
   },
   "photo": "mvar6mlvg38v5p.jpg",
   "created": "2026-10-16T08:52:00.644Z"
@@ -246,7 +246,7 @@
    "moon_pct": 27,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-17"
+   "added": "2026-10-18"
   },
   "photo": "mvar7m9edzraiz.jpg",
   "created": "2026-10-16T09:06:33.747Z"
@@ -274,12 +274,12 @@
    "level_trend": "steady",
    "level_vs_normal": "low",
    "flow_m3s": null,
-   "air_temp_c": 9,
+   "air_temp_c": 8.6,
    "pressure_hpa": 1036,
-   "pressure_change_24h": 13.5,
-   "wind_kmh": 13.4,
+   "pressure_change_24h": 14,
+   "wind_kmh": 12.3,
    "wind_from": "N",
-   "cloud_pct": 4,
+   "cloud_pct": 5,
    "rain_24h_mm": 0.5,
    "rain_72h_mm": 7.3,
    "sunrise": "07:36",
@@ -288,7 +288,7 @@
    "moon_pct": 37,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-17"
+   "added": "2026-10-18"
   },
   "photo": "",
   "created": "2026-10-17T11:30:40.820Z"
