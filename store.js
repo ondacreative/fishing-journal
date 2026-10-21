@@ -6,7 +6,7 @@
 // It mimics the small part of a Firestore-style API the page uses:
 //   db.collection(name).onSnapshot(cb, onError)
 //   db.collection(name).doc(id?).set(body) / .delete()
-//   assets.upload(blob) -> {id}
+//   assets.upload(blob) -> {id}, assets.remove(id)
 
 const GitHubStore = (() => {
   const REPO = { owner: "ondacreative", repo: "fishing-journal", branch: "main" };
@@ -145,6 +145,18 @@ const GitHubStore = (() => {
       const bytes = new Uint8Array(await blob.arrayBuffer());
       await putFile(`photos/${id}`, toB64(bytes), null, "Photo");
       return { id };
+    },
+    async remove(id) {
+      const path = `photos/${encodeURIComponent(id)}`;
+      const r = await fetch(`${API}/contents/${path}?ref=${REPO.branch}`, { headers: headers(), cache: "no-store" });
+      if (r.status === 404) return;
+      if (!r.ok) throw new StoreError("unavailable", `GitHub said ${r.status}`);
+      const { sha } = await r.json();
+      const d = await fetch(`${API}/contents/${path}`, {
+        method: "DELETE", headers: headers({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ message: "Delete photo", sha, branch: REPO.branch }),
+      });
+      if (!d.ok && d.status !== 404) throw new StoreError("unavailable", `GitHub said ${d.status}`);
     },
   };
   const photoUrl = id => `https://raw.githubusercontent.com/${REPO.owner}/${REPO.repo}/${REPO.branch}/photos/${encodeURIComponent(id)}`;

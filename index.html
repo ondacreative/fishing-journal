@@ -239,6 +239,7 @@
       <label class="lab" for="photo">Photo (optional)</label>
       <input type="file" id="photo" accept="image/*">
       <img id="photoPreview" class="preview" alt="Photo preview" hidden>
+      <div><button class="danger" type="button" id="photoDrop" hidden>Remove photo</button></div>
     </fieldset>
 
     <div id="formErr" class="status" aria-live="polite"></div>
@@ -383,7 +384,7 @@
   let db = null, assets = null, canWrite = false;
   let catches = [];               // [{id, ...data}]
   let editing = null;             // id being edited, or null
-  let species = "", photoBlob = null;
+  let species = "", photoBlob = null, dropPhoto = false;
   let trips = [];                 // logged sessions: [{id, date, time, hours, methods, ...}]
   let bites = [];                 // bites and lost fish: [{id, kind: "bite"|"lost", date, time, species?, ...}]
   let mode = "fish", kind = "bite";   // which the fish form is doing; bite kind
@@ -874,9 +875,9 @@
     $("bait").value = c ? (c.bait || "") : (store.get("fj_bait") || "");
     $("method").value = c ? (c.method || "") : (store.get("fj_method") || "");
     $("notes").value = c ? (c.notes || "") : "";
-    $("photo").value = ""; photoBlob = null;
+    $("photo").value = ""; photoBlob = null; dropPhoto = false;
     $("photoSet").hidden = !assets || b;
-    $("photoPreview").hidden = !(c && c.photo);
+    $("photoPreview").hidden = $("photoDrop").hidden = !(c && c.photo);
     if (c && c.photo) $("photoPreview").src = GitHubStore.photoUrl(c.photo);
     $("del").hidden = !c; $("confirmDel").hidden = true; $("formErr").textContent = "";
     drawKinds(); drawSpecies(); drawSpots(); drawBaits(); showCoords();
@@ -931,7 +932,7 @@
     // Conditions depend on time and place; clear them if either changed.
     const moved = !old || old.date !== body.date || old.time !== body.time || old.lat !== body.lat || old.lon !== body.lon;
     body.conditions = moved ? null : (old.conditions ?? null);
-    if (!b) body.photo = old ? (old.photo || "") : "";
+    if (!b) body.photo = old && !dropPhoto ? (old.photo || "") : "";
     body.created = old ? (old.created || new Date().toISOString()) : new Date().toISOString();
 
     $("save").disabled = true; $("save").textContent = "Saving…";
@@ -942,6 +943,8 @@
       }
       const ref = editing ? db.collection(coll).doc(editing) : db.collection(coll).doc();
       await ref.set(body);
+      // A removed or replaced photo is no longer used; tidy its file away.
+      if (!b && old && old.photo && old.photo !== body.photo && assets) assets.remove(old.photo).catch(() => {});
       if (!b) store.set("fj_species", sp);
       store.set("fj_bait", body.bait); store.set("fj_method", body.method);
       if (!err.textContent) closeForm();
@@ -954,7 +957,12 @@
 
   async function remove() {
     if (!editing) return;
-    try { await db.collection(mode === "bite" ? "bites" : "catches").doc(editing).delete(); closeForm(); }
+    const old = mode === "bite" ? null : catches.find(c => c.id === editing);
+    try {
+      await db.collection(mode === "bite" ? "bites" : "catches").doc(editing).delete();
+      if (old && old.photo && assets) assets.remove(old.photo).catch(() => {});
+      closeForm();
+    }
     catch { $("formErr").textContent = "That didn't delete. Try again."; }
   }
 
@@ -1116,6 +1124,11 @@
     if (!f) { photoBlob = null; return; }
     photoBlob = await shrinkPhoto(f);
     $("photoPreview").src = URL.createObjectURL(photoBlob); $("photoPreview").hidden = false;
+    $("photoDrop").hidden = false;
+  });
+  $("photoDrop").addEventListener("click", () => {
+    $("photo").value = ""; photoBlob = null; dropPhoto = true;
+    $("photoPreview").hidden = $("photoDrop").hidden = true;
   });
   $("list").addEventListener("click", e => {
     const id = e.target.closest("[data-edit]")?.dataset.edit;
