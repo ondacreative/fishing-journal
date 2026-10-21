@@ -292,5 +292,25 @@
   },
   "photo": "",
   "created": "2026-10-17T11:30:40.820Z"
+ },
+ {
+  "id": "mvhx25c448qp2x",
+  "date": "2026-10-21",
+  "time": "10:20",
+  "species": "Chub",
+  "weight": "4lb 5oz",
+  "lb": 4,
+  "oz": 5,
+  "plus": false,
+  "weight_lb": 4.313,
+  "lat": 52.852481,
+  "lon": -1.6266823,
+  "spot": "Gravel bank",
+  "bait": "Luncheon meat",
+  "method": "Ledger",
+  "notes": "",
+  "conditions": null,
+  "photo": "mvhx22dwyl7ibd.jpg",
+  "created": "2026-10-21T09:35:11.252Z"
  }
 ]
