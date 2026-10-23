@@ -204,7 +204,7 @@
    "moon_pct": 27,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-21"
+   "added": "2026-10-23"
   },
   "photo": "mvar6mlvg38v5p.jpg",
   "created": "2026-10-16T08:52:00.644Z"
@@ -246,7 +246,7 @@
    "moon_pct": 27,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-21"
+   "added": "2026-10-23"
   },
   "photo": "mvar7m9edzraiz.jpg",
   "created": "2026-10-16T09:06:33.747Z"
@@ -288,7 +288,7 @@
    "moon_pct": 37,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-21"
+   "added": "2026-10-23"
   },
   "photo": "",
   "created": "2026-10-17T11:30:40.820Z"
@@ -310,27 +310,27 @@
   "method": "Ledger",
   "notes": "",
   "conditions": {
-   "level_m": null,
-   "level_change_6h_cm": null,
-   "level_change_24h_cm": null,
-   "level_trend": "unknown",
-   "level_vs_normal": "unknown",
+   "level_m": 0.468,
+   "level_change_6h_cm": 0,
+   "level_change_24h_cm": 4.3,
+   "level_trend": "steady",
+   "level_vs_normal": "low",
    "flow_m3s": null,
-   "air_temp_c": 8.6,
-   "pressure_hpa": 997,
-   "pressure_change_24h": -13.9,
-   "wind_kmh": 6.7,
+   "air_temp_c": 8.8,
+   "pressure_hpa": 998,
+   "pressure_change_24h": -13.7,
+   "wind_kmh": 11.5,
    "wind_from": "S",
    "cloud_pct": 100,
-   "rain_24h_mm": 5.2,
-   "rain_72h_mm": 16.3,
+   "rain_24h_mm": 5.6,
+   "rain_72h_mm": 16.7,
    "sunrise": "07:43",
    "sunset": "17:58",
    "light": "2h 37m after sunrise",
    "moon_pct": 77,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-21"
+   "added": "2026-10-23"
   },
   "photo": "mvhx22dwyl7ibd.jpg",
   "created": "2026-10-21T09:35:11.252Z"
@@ -358,21 +358,21 @@
    "level_trend": "steady",
    "level_vs_normal": "low",
    "flow_m3s": null,
-   "air_temp_c": 9.1,
-   "pressure_hpa": 997,
-   "pressure_change_24h": -12.6,
-   "wind_kmh": 10.1,
+   "air_temp_c": 9.3,
+   "pressure_hpa": 998,
+   "pressure_change_24h": -12.2,
+   "wind_kmh": 12.6,
    "wind_from": "SW",
    "cloud_pct": 100,
-   "rain_24h_mm": 4.8,
-   "rain_72h_mm": 16.3,
+   "rain_24h_mm": 5.4,
+   "rain_72h_mm": 16.9,
    "sunrise": "07:43",
    "sunset": "17:58",
    "light": "3h 47m after sunrise",
    "moon_pct": 77,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-21"
+   "added": "2026-10-23"
   },
   "photo": "mvi323rm6ygun7.jpg",
   "created": "2026-10-21T12:23:10.737Z"
