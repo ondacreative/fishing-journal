@@ -88,7 +88,29 @@
   "spot": "Horseshoe Meadow",
   "bait": "",
   "notes": "",
-  "conditions": null,
+  "conditions": {
+   "level_m": 0.971,
+   "level_change_6h_cm": 21.2,
+   "level_change_24h_cm": 49.2,
+   "level_trend": "rising",
+   "level_vs_normal": "normal",
+   "flow_m3s": null,
+   "air_temp_c": 6.3,
+   "pressure_hpa": 1009,
+   "pressure_change_24h": 17.5,
+   "wind_kmh": 15.7,
+   "wind_from": "SW",
+   "cloud_pct": 100,
+   "rain_24h_mm": 4.1,
+   "rain_72h_mm": 20.4,
+   "sunrise": "07:49",
+   "sunset": "17:51",
+   "light": "0h 49m before sunrise",
+   "moon_pct": 97,
+   "moon_phase": "waxing",
+   "data_note": "Recent: figures may be revised slightly",
+   "added": "2026-10-24"
+  },
   "created": "2026-10-24T10:22:48.464Z"
  }
 ]
