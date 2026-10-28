@@ -70,8 +70,8 @@
    "light": "1h 41m after sunrise",
    "moon_pct": 27,
    "moon_phase": "waxing",
-   "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-25"
+   "data_note": "",
+   "added": "2026-10-28"
   },
   "created": "2026-10-16T14:24:33.205Z"
  },
@@ -109,7 +109,7 @@
    "moon_pct": 97,
    "moon_phase": "waxing",
    "data_note": "Recent: figures may be revised slightly",
-   "added": "2026-10-25"
+   "added": "2026-10-28"
   },
   "created": "2026-10-24T10:22:48.464Z"
  }
