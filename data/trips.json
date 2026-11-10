@@ -126,7 +126,29 @@
   "spot": "Marston-Bridge",
   "bait": "",
   "notes": "",
-  "conditions": null,
+  "conditions": {
+   "level_m": 0.446,
+   "level_change_6h_cm": -0.3,
+   "level_change_24h_cm": -0.5,
+   "level_trend": "steady",
+   "level_vs_normal": "low",
+   "flow_m3s": null,
+   "air_temp_c": 5.8,
+   "pressure_hpa": 1013,
+   "pressure_change_24h": -6.1,
+   "wind_kmh": 11.7,
+   "wind_from": "E",
+   "cloud_pct": 100,
+   "rain_24h_mm": 0,
+   "rain_72h_mm": 0.1,
+   "sunrise": "07:20",
+   "sunset": "16:20",
+   "light": "1h 10m after sunrise",
+   "moon_pct": 0,
+   "moon_phase": "waxing",
+   "data_note": "Recent: figures may be revised slightly",
+   "added": "2026-11-10"
+  },
   "created": "2026-11-10T15:53:43.563Z"
  }
 ]
